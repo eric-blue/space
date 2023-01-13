@@ -9,6 +9,7 @@ import { CameraControl } from "../actors/Camera.ts";
 import { Clock } from "../actors/Clock.ts";
 
 const scene = new THREE.Scene()
+scene.fog = new THREE.Fog(0x292929, 10, 20)
 const textureLoader = new THREE.TextureLoader(new THREE.LoadingManager())
 
 // const imageSrc = asset('/textures/skybox.png');
@@ -35,7 +36,7 @@ function init() {
   const positions = new Float32Array(count * 3)
 
   for (let i = 0; i < count * 3; i++) {
-    positions[i] = (Math.random() - 0.5) * 100
+    positions[i] = 10 * (Math.random() - 0.5) * 100
   }
 
   particlesGeometry.setAttribute(
@@ -67,7 +68,7 @@ function init() {
     radius: 3389500, // Mars standard
     mass: 6.39e23, // Mars standard
     gravityWellMass: 1.989e30, // Sun standard,
-    orbitalRadius: 227939200, // Mars standard,
+    orbitalRadius: 227939200000, // Mars standard,
     orbitalEccentricity: 0.6,
     color: new THREE.Color(0xff0000),
   })
@@ -82,7 +83,7 @@ function init() {
     radius: 6371000, // Earth standard,
     mass: 5.972e24, // Earth standard,
     gravityWellMass: 1.989e30, // Sun standard,
-    orbitalRadius: 149598023, // Earth standard,
+    orbitalRadius: 149598023000, // Earth standard,
     orbitalEccentricity: 0.3, // Earth standard,
     color: new THREE.Color(0x00ff00),
   })
@@ -100,20 +101,21 @@ function init() {
   })
   moon.spawn(scene);
 
-  // const moon2 = new Planetary({
-  //   ...common,
-  //   type: "moon",
-  //   gravityWellMass: 5.972e24, // Earth standard,
-  //   radius: 1737100, // Moon standard,
-  //   mass: 7.34767309e25, // Moon standard,
-  //   orbitalRadius: 184400000, // Moon standard,
-  //   orbitalEccentricity: 0.6, // Moon standard,
-  //   color: new THREE.Color(0xaaaaaa),
-  // })
-  // moon2.spawn(scene);
+  const moon2 = new Planetary({
+    ...common,
+    type: "moon",
+    gravityWellMass: 5.972e24, // Earth standard,
+    radius: 1737100, // Moon standard,
+    mass: 7.34767309e25, // Moon standard,
+    orbitalRadius: 384400000, // Moon standard,
+    orbitalEccentricity: 0.6, // Moon standard,
+    // yellow
+    color: new THREE.Color(0xffff00),
+  })
+  moon2.spawn(scene);
 
   const plane = new THREE.Mesh(
-    new THREE.PlaneBufferGeometry(800, 800, 1000, 1000),
+    new THREE.PlaneGeometry(800, 800, 1000, 1000),
     new THREE.MeshStandardMaterial({
       color: new THREE.Color(0x292929),
       wireframe: true,
@@ -127,7 +129,10 @@ function init() {
   plane.receiveShadow = true
   scene.add(plane)
 
-  scene.fog = new THREE.Fog(0x292929, 10, 50)
+  // const gridHelper = new THREE.GridHelper( 50000, 50000, new THREE.Color(0x292929), new THREE.Color(0x292929) );
+  // gridHelper.position.y = - 1;
+  // gridHelper.receiveShadow = true
+  // scene.add( gridHelper );
 
   const axesHelper = new THREE.AxesHelper(3)
   scene.add(axesHelper)
@@ -155,25 +160,38 @@ function init() {
   renderer.setSize(sizes.width, sizes.height)
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+  renderer.physicallyCorrectLights = true;
+  renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.setClearColor(0x292929)
+
+  cameraControl.setCameraFocus(planet.mesh)
+  // @ts-expect-error
+  window.CAMERACONTROL = {
+    planet: () => cameraControl.setCameraFocus(planet.mesh),
+    moon: () => cameraControl.setCameraFocus(moon.mesh),
+    mars: () => cameraControl.setCameraFocus(mars.mesh),
+    star: () => cameraControl.setCameraFocus(star.mesh),
+  }
 
   const tick = () => {
     const elapsed = clock.getElapsedTime()
 
-    cameraControl.controls.update()
     mars.update()
     planet.update()
     moon.update()
-    // moon2.update()
+    moon2.update()
+
+    cameraControl.update(elapsed)
+
 
 
     // planet?.mesh ? planet.mesh.rotation.y = 0.8 * elapsed : null;
     // moon?.mesh.rotation.y = 0.015 * elapsed
     // group.rotation.y = 5 * elapsed
     // star.mesh.rotation.y = 0.01 * elapsed
-    particles.rotation.y = -0.01 * elapsed
-
-    cameraControl.setCameraFocus(planet.mesh)
+    particles.rotation.y = -0.01 * elapsed/500
 
     requestAnimationFrame(tick);
 
@@ -186,5 +204,5 @@ function init() {
 export default function HelloCruelWorld() {
   useEffect(() => { init() }, [])
 
-  return <canvas class="webgl" style={{backgroundColor: "#292929"}}/>
+  return <canvas class="webgl" style={{backgroundColor: "#292929"}} draggable={true}/>
 }

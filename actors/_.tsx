@@ -32,7 +32,7 @@ export interface _Params {
    */
   orbitalEccentricity?: number;
 
-  relativeVelocity?: number;
+  initialVelocity?: number;
 
   // axialTilt?: number;
   // axialRotation?: number;
@@ -52,7 +52,8 @@ export class _ {
     this.mesh.name = params.type ?? "actor";
     this.group = params.group;
 
-    this.orbitalPeriod = this.setOrbitalPeriod();
+    this.orbitalPeriod = 0;
+    this.setOrbitalPeriod();
   }
 
   spawn(scene: THREE.Scene) {
@@ -62,33 +63,51 @@ export class _ {
       this.group.add(this.mesh);
       if (this.params.isGroupAnchor) scene.add(this.group);
     }
+
+    this.update();
   }
 
   update(params?: _Params) {
     this.params = {...this.params, ...params};
     const {
       clock,
-      orbitalRadius: major,
+      orbitalRadius: major = 0,
       orbitalEccentricity: e,
       isGroupAnchor,
     } = this.params;
-
-    const orbitalPeriod = this.setOrbitalPeriod();
     const elapsed = clock.getElapsedTime();
 
-    if (major && e !== undefined && orbitalPeriod && this.mesh) {
+    if (major && e !== undefined && this.orbitalPeriod && this.mesh) {
       const minor = major * Math.sqrt(1 - Math.pow(e, 2));
-      const meanAnomaly = ((2 * π) / orbitalPeriod) * elapsed;
+      const angularVelocity = ((2 * π) / this.orbitalPeriod);
+      const meanAnomaly = angularVelocity * elapsed;
       const eccentricAnomaly = this.getEccentricAnomaly(meanAnomaly, meanAnomaly);
 
       if (isGroupAnchor && this.group) {
         this.group.position.set(
-          10 * getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e)),
+          getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e)),
           0,
-          10 * getDerivedRadius(minor * Math.sin(eccentricAnomaly)),
+          getDerivedRadius(minor * Math.sin(eccentricAnomaly)),
         );
-        this.group.rotation.y = 0.15 * elapsed; // this shouldn't be necessary :(
+        // console.log(getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e)))
+
+        // this.group.rotation.y = 0.015 * elapsed; // this shouldn't be necessary :(
       } else if (this.group) {
+        // there's a diff here between the group reference frame and the mesh reference frame
+        // the timeframe reference is different, so the mesh is orbiting slower than the group
+        // this is because the group is orbiting the sun, and the mesh is orbiting the group
+        // need to add an adjustment
+        // is this time dilation?
+
+        if (this.mesh?.parent) {
+          // this.mesh.position.set(
+          //   getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e)),
+          //   0,
+          //   getDerivedRadius(minor * Math.sin(eccentricAnomaly)),
+          // );
+        }
+        // Add the initial velocity to the mesh's velocity
+
         this.mesh.position.set(
           getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e)),
           0,
@@ -96,9 +115,9 @@ export class _ {
         )
       } else {
         this.mesh.position.set(
-          10 * getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e)),
+          getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e)),
           0,
-          10 * getDerivedRadius(minor * Math.sin(eccentricAnomaly)),
+          getDerivedRadius(minor * Math.sin(eccentricAnomaly)),
         );
       }
     }
@@ -113,13 +132,12 @@ export class _ {
     // maybe spawn wreckage? if ship, else spawn resources?
   }
 
+  // in seconds
   setOrbitalPeriod() {
-    const { gravityWellMass, orbitalRadius } = this.params;
-    /** standard gravitational parameter of the central body in meters^3/s^2 */
+    const { gravityWellMass, orbitalRadius: semiMajorAxis } = this.params;
     const μ = G * (gravityWellMass ?? 0);
-    if (orbitalRadius) {
-      this.orbitalPeriod = 2 * π * Math.sqrt(Math.pow(orbitalRadius, 3) / μ);
-      return this.orbitalPeriod;
+    if (semiMajorAxis) {
+      this.orbitalPeriod = 2 * π * Math.sqrt(Math.pow(semiMajorAxis, 3) / μ);
     }
   }
 
