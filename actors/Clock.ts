@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-type TimeScale = 1 | 2 | 10 | 100;
+type TimeScale = 1000 | 10000 | 100000;
 
 export class Clock {
   private clock: THREE.Clock;

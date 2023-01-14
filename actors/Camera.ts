@@ -21,7 +21,7 @@ export class CameraControl {
       0.01,
       1000
     );
-    this.camera.position.set(0, 0, 5);
+    this.camera.position.set(0, 0, 0.05);
 
     this.controls = new CameraControls(this.camera, params.canvas as HTMLElement)
     this.enableTracking = true
@@ -77,6 +77,7 @@ export class CameraControl {
       objectPosition.x,
       objectPosition.y,
       objectPosition.z,
+      true,
     )
 
     // this.controls.setLookAt(

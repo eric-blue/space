@@ -37,7 +37,7 @@ export interface _Params {
   // axialTilt?: number;
   // axialRotation?: number;
 
-  spin?: number;
+  spinRate?: number; // todo
 }
 
 export class _ {
@@ -73,6 +73,7 @@ export class _ {
       clock,
       orbitalRadius: major = 0,
       orbitalEccentricity: e,
+      orbitalInclination: inclination = 0,
       isGroupAnchor,
     } = this.params;
     const elapsed = clock.getElapsedTime();
@@ -83,43 +84,12 @@ export class _ {
       const meanAnomaly = angularVelocity * elapsed;
       const eccentricAnomaly = this.getEccentricAnomaly(meanAnomaly, meanAnomaly);
 
-      if (isGroupAnchor && this.group) {
-        this.group.position.set(
-          getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e)),
-          0,
-          getDerivedRadius(minor * Math.sin(eccentricAnomaly)),
-        );
-        // console.log(getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e)))
+      const x = getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e))
+      const z = getDerivedRadius(minor * Math.sin(eccentricAnomaly))
 
-        // this.group.rotation.y = 0.015 * elapsed; // this shouldn't be necessary :(
-      } else if (this.group) {
-        // there's a diff here between the group reference frame and the mesh reference frame
-        // the timeframe reference is different, so the mesh is orbiting slower than the group
-        // this is because the group is orbiting the sun, and the mesh is orbiting the group
-        // need to add an adjustment
-        // is this time dilation?
+      const target = isGroupAnchor && this.group ? this.group : this.mesh;
 
-        if (this.mesh?.parent) {
-          // this.mesh.position.set(
-          //   getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e)),
-          //   0,
-          //   getDerivedRadius(minor * Math.sin(eccentricAnomaly)),
-          // );
-        }
-        // Add the initial velocity to the mesh's velocity
-
-        this.mesh.position.set(
-          getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e)),
-          0,
-          getDerivedRadius(minor * Math.sin(eccentricAnomaly))
-        )
-      } else {
-        this.mesh.position.set(
-          getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e)),
-          0,
-          getDerivedRadius(minor * Math.sin(eccentricAnomaly)),
-        );
-      }
+      target.position.set(x, 0, z);
     }
   }
 
@@ -162,10 +132,25 @@ export class _ {
       : ENew;
   }
 
-  getLagrangePoints() {}
+  getLagrangePoints(secondaryBody: _) {
+    const { mass: m1 } = this.params;
+    const { mass: m2 } = secondaryBody.params;
+    if (m1 && m2) {
+      const a = (m2 / (3 * m1)) ** (1/3);
+      const b = (m1 / (3 * m2)) ** (1/3);
+      return {
+        L1: a - b,
+        L2: -a - b,
+        L3: a + b,
+        L4: -a + b
+      };
+    }
+    return { L1: 0, L2: 0, L3: 0, L4: 0 };
+  }
 
   /** returns collision force in newtons */
   getCollisionForcePotential(opponent: _) {
+    // this doesnt take into account real world units
     const { mass: m1 } = this.params;
     const { mass: m2 } = opponent.params;
     if (m1 && m2 && this.mesh && opponent.mesh) {

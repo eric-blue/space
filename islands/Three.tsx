@@ -7,6 +7,7 @@ import { Planetary } from "../actors/Planetary.ts";
 import { SOLAR_MASS, SOLAR_RADIUS } from "../constants.ts";
 import { CameraControl } from "../actors/Camera.ts";
 import { Clock } from "../actors/Clock.ts";
+import { Skybox } from "../actors/Skybox.ts";
 
 const scene = new THREE.Scene()
 scene.fog = new THREE.Fog(0x292929, 10, 20)
@@ -31,29 +32,8 @@ function init() {
   const cameraControl = new CameraControl({canvas})
   // const texture = textureLoader.load(imageSrc)
 
-  const particlesGeometry = new THREE.BufferGeometry()
-  const count = 50000
-  const positions = new Float32Array(count * 3)
-
-  for (let i = 0; i < count * 3; i++) {
-    positions[i] = 10 * (Math.random() - 0.5) * 100
-  }
-
-  particlesGeometry.setAttribute(
-    'position',
-    new THREE.BufferAttribute(positions, 3)
-  )
-  const particles = new THREE.Points(
-    particlesGeometry,
-    new THREE.PointsMaterial({
-      size: 0.02,
-      alphaTest: 0.001,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    })
-  )
-  scene.add(particles)
+  const skybox = new Skybox;
+  skybox.spawn(scene);
 
   const star = new Star({
     clock,
@@ -126,13 +106,7 @@ function init() {
   )
   plane.rotation.x = -Math.PI * 0.5
   plane.position.y = -3
-  plane.receiveShadow = true
-  scene.add(plane)
-
-  // const gridHelper = new THREE.GridHelper( 50000, 50000, new THREE.Color(0x292929), new THREE.Color(0x292929) );
-  // gridHelper.position.y = - 1;
-  // gridHelper.receiveShadow = true
-  // scene.add( gridHelper );
+  scene.add(plane);
 
   const axesHelper = new THREE.AxesHelper(3)
   scene.add(axesHelper)
@@ -182,6 +156,7 @@ function init() {
     planet.update()
     moon.update()
     moon2.update()
+    skybox.update()
 
     cameraControl.update(elapsed)
 
@@ -191,7 +166,6 @@ function init() {
     // moon?.mesh.rotation.y = 0.015 * elapsed
     // group.rotation.y = 5 * elapsed
     // star.mesh.rotation.y = 0.01 * elapsed
-    particles.rotation.y = -0.01 * elapsed/500
 
     requestAnimationFrame(tick);
 
