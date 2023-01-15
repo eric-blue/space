@@ -18,12 +18,13 @@ export class CameraControl {
     this.camera = new THREE.PerspectiveCamera(
       100,
       window.innerWidth / window.innerHeight,
-      0.01,
+      0.00001,
       1000
     );
-    this.camera.position.set(0, 0, 0.05);
+    this.camera.position.set(0, 0, .05);
 
     this.controls = new CameraControls(this.camera, params.canvas as HTMLElement)
+
     this.enableTracking = true
     this.lastTracked = null // should default to player actor
 
@@ -86,5 +87,8 @@ export class CameraControl {
     //   objectPosition.z,
     //   0,0,0
     // )
+
+    this.controls.minZoom = 10;
+    this.controls.maxZoom = 1000;
   }
 }

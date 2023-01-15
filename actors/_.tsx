@@ -1,4 +1,5 @@
 import * as THREE from "three";
+
 import { G, SOLAR_RADIUS } from "../constants.ts";
 import { Clock } from "./Clock.ts";
 
@@ -9,7 +10,7 @@ export interface _Params {
   group?: THREE.Group;
   isGroupAnchor?: boolean;
 
-  type?: "star" | "planet" | "moon";
+  type?: "star" | "planet" | "moon" | "ship" | "asteroid";
 
   /** in kilograms */
   mass: number;
@@ -67,16 +68,31 @@ export class _ {
     this.update();
   }
 
-  update(params?: _Params) {
+  update(params?: Partial<Omit<_Params, 'clock'>>) {
     this.params = {...this.params, ...params};
+    const { clock } = this.params;
+    const elapsed = clock.getElapsedTime();
+
+    this.setPosition(elapsed);
+  }
+
+  destroy(scene: THREE.Scene) {
+    if (!this.mesh) throw new Error("No mesh to destroy");
+    this.mesh.geometry.dispose();
+    scene.remove(this.mesh);
+    this.mesh.removeFromParent();
+    this.mesh = undefined;
+
+    // maybe spawn wreckage? if ship, else spawn resources?
+  }
+
+  setPosition(elapsed: number) {
     const {
-      clock,
       orbitalRadius: major = 0,
-      orbitalEccentricity: e,
+      orbitalEccentricity: e = 0,
       orbitalInclination: inclination = 0,
       isGroupAnchor,
     } = this.params;
-    const elapsed = clock.getElapsedTime();
 
     if (major && e !== undefined && this.orbitalPeriod && this.mesh) {
       const minor = major * Math.sqrt(1 - Math.pow(e, 2));
@@ -91,15 +107,6 @@ export class _ {
 
       target.position.set(x, 0, z);
     }
-  }
-
-  destroy(scene: THREE.Scene) {
-    if (!this.mesh) throw new Error("No mesh to destroy");
-    this.mesh.geometry.dispose();
-    scene.remove(this.mesh);
-    this.mesh = undefined;
-
-    // maybe spawn wreckage? if ship, else spawn resources?
   }
 
   // in seconds
@@ -122,9 +129,9 @@ export class _ {
    */
   getEccentricAnomaly(E: number, M: number): number {
     const tolerance = 1e-6;
-    const { orbitalEccentricity: e } = this.params;
+    const { orbitalEccentricity: e = 0 } = this.params;
 
-    if (!e || !this.orbitalPeriod) return 0;
+    if (e === undefined || !this.orbitalPeriod) return 0;
     const ENew = E + (M + e*Math.sin(E) - E)/(1 - e * Math.cos(E));
 
     return (Math.abs(ENew - E) > tolerance)

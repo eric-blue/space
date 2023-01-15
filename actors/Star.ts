@@ -37,12 +37,12 @@ export class Star extends _ {
     // pointLight.shadow.camera.near = 0.1
     // pointLight.shadow.camera.far = 5
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 30)
-    directionalLight.position.set(this.mesh.position.x, 100, this.mesh.position.z-5)
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 2)
+    directionalLight.position.set(this.mesh.position.x, 0, this.mesh.position.z - 5)
 
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(50, 50, 30);
-    scene.add(light);
+    // const light = new THREE.DirectionalLight(0xffffff, 1);
+    // light.position.set(0, -0.5, 0);
+    // scene.add(light);
 
     // addLight( 0.55, 0.9, 0.5, 5000, 0, - 1000 );
     // addLight( 0.08, 0.8, 0.5, 0, 0, - 1000 );

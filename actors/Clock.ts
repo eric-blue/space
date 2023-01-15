@@ -11,7 +11,7 @@ export class Clock {
     this.clock = new THREE.Clock();
     this.clock.autoStart = true
     this.time = 0;
-    this.timeScale = 100000;
+    this.timeScale = 10000;
   }
 
   getDelta(): number {

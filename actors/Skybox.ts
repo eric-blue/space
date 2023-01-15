@@ -13,6 +13,8 @@ particlesGeometry.setAttribute(
 
 export class Skybox {
   particles: THREE.Points<THREE.BufferGeometry,THREE.PointsMaterial>;
+  plane: THREE.Mesh<THREE.PlaneGeometry,THREE.MeshStandardMaterial>;
+
   constructor() {
     this.particles = new THREE.Points(
       particlesGeometry,
@@ -25,14 +27,27 @@ export class Skybox {
         side: THREE.BackSide
       })
     )
+
+    this.plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(800, 800, 1000, 1000),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(0xaaaaaa),
+        wireframe: true,
+        transparent: true,
+        wireframeLinewidth: 0.5,
+        opacity: 0.25,
+      })
+    )
+    this.plane.rotation.x = -Math.PI * 0.5
+    this.plane.position.y = -3
   }
 
   spawn(scene: THREE.Scene) {
-    scene.add(this.particles)
+    scene.add(this.particles, this.plane)
   }
 
   update() {
-    this.particles.rotation.y -= 0.0005
+    this.particles.rotation.y += 0.0005
   }
 }
 

@@ -8,12 +8,17 @@ import { SOLAR_MASS, SOLAR_RADIUS } from "../constants.ts";
 import { CameraControl } from "../actors/Camera.ts";
 import { Clock } from "../actors/Clock.ts";
 import { Skybox } from "../actors/Skybox.ts";
+import { Ship } from "../actors/Ship.ts";
+import { _ } from "../actors/_.tsx";
 
 const scene = new THREE.Scene()
 scene.fog = new THREE.Fog(0x292929, 10, 20)
 const textureLoader = new THREE.TextureLoader(new THREE.LoadingManager())
 
 // const imageSrc = asset('/textures/skybox.png');
+
+type OrbitalGroup = _ | _[] | OrbitalGroup[]
+type StarSystem = [Star, OrbitalGroup]
 
 function init() {
   const canvas = document.querySelector('.webgl') as HTMLCanvasElement;
@@ -25,11 +30,11 @@ function init() {
   //   cursor.y = -(e.clientY / sizes.height - 0.5)
   // })
 
+  const cameraControl = new CameraControl({canvas})
   const clock = new Clock();
   // @ts-expect-error
   window.CLOCK = clock;
 
-  const cameraControl = new CameraControl({canvas})
   // const texture = textureLoader.load(imageSrc)
 
   const skybox = new Skybox;
@@ -89,27 +94,24 @@ function init() {
     mass: 7.34767309e25, // Moon standard,
     orbitalRadius: 384400000, // Moon standard,
     orbitalEccentricity: 0.6, // Moon standard,
-    // yellow
     color: new THREE.Color(0xffff00),
   })
   moon2.spawn(scene);
 
-  const plane = new THREE.Mesh(
-    new THREE.PlaneGeometry(800, 800, 1000, 1000),
-    new THREE.MeshStandardMaterial({
-      color: new THREE.Color(0x292929),
-      wireframe: true,
-      transparent: true,
-      wireframeLinewidth: 0.5,
-      opacity: 0.25,
-    })
-  )
-  plane.rotation.x = -Math.PI * 0.5
-  plane.position.y = -3
-  scene.add(plane);
-
-  const axesHelper = new THREE.AxesHelper(3)
-  scene.add(axesHelper)
+  const ship1 = new Ship({
+    clock,
+    type: "ship",
+    width: 682,
+    height: 682,
+    depth: 2406,
+    radius: 682/2,
+    mass: 24000000000,
+    gravityWellMass: 1.989e30, // Sun standard,
+    orbitalRadius: 14959802300*2, // Earth standard,
+    orbitalEccentricity: 0.8,
+    color: new THREE.Color(0xffff00),
+  })
+  ship1.spawn(scene);
 
   let sizes = { width: innerWidth, height: innerHeight }
 
@@ -141,12 +143,15 @@ function init() {
   renderer.setClearColor(0x292929)
 
   cameraControl.setCameraFocus(planet.mesh)
+
   // @ts-expect-error
   window.CAMERACONTROL = {
     planet: () => cameraControl.setCameraFocus(planet.mesh),
     moon: () => cameraControl.setCameraFocus(moon.mesh),
     mars: () => cameraControl.setCameraFocus(mars.mesh),
     star: () => cameraControl.setCameraFocus(star.mesh),
+    ship: () => cameraControl.setCameraFocus(ship1.mesh),
+    navigate: () => ship1.navigate()
   }
 
   const tick = () => {
@@ -157,10 +162,9 @@ function init() {
     moon.update()
     moon2.update()
     skybox.update()
+    ship1.update()
 
     cameraControl.update(elapsed)
-
-
 
     // planet?.mesh ? planet.mesh.rotation.y = 0.8 * elapsed : null;
     // moon?.mesh.rotation.y = 0.015 * elapsed
