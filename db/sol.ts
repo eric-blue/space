@@ -1,15 +1,18 @@
+import { SOLAR_MASS, SOLAR_RADIUS } from "../constants.ts";
 import { StarSystem } from "../islands/Three.tsx";
 
 export const sol: StarSystem = [
   {
+    label: "Sol",
     type: "star",
-    mass: 1.989e30, // Sun standard,
-    radius: 695700000, // Sun standard,
+    mass: SOLAR_MASS, // Sun standard,
+    radius: SOLAR_RADIUS, // Sun standard,
     energyOutput: 3.846e26, // Sun standard,
-    // color: "#ffcc00"
+    color: "#ffffff"
   },
   [
     {
+      label: "Mercury",
       type: "planet",
       isGroupAnchor: true,
       radius: 2440, // Mercury standard,
@@ -22,6 +25,7 @@ export const sol: StarSystem = [
   ],
   [
     {
+      label: "Venus",
       type: "planet",
       isGroupAnchor: true,
       radius: 6051.8, // Venus standard,
@@ -34,6 +38,7 @@ export const sol: StarSystem = [
   ],
   [
     {
+      label: "Earth",
       type: "planet",
       isGroupAnchor: true,
       radius: 6371000, // Earth standard,
@@ -44,6 +49,7 @@ export const sol: StarSystem = [
       color: "#00ff00",
     },
     {
+      label: "Luna",
       type: "moon",
       gravityWellMass: 5.972e24, // Earth standard,
       radius: 1737100, // Moon standard,
@@ -55,6 +61,7 @@ export const sol: StarSystem = [
   ],
   [
     {
+      label: "Mars",
       type: "planet",
       isGroupAnchor: true,
       radius: 3389.5, // Mars standard,
@@ -67,6 +74,7 @@ export const sol: StarSystem = [
   ],
   [
     {
+      label: "Jupiter",
       type: "planet",
       isGroupAnchor: true,
       radius: 69911, // Jupiter standard,
@@ -79,6 +87,7 @@ export const sol: StarSystem = [
   ],
   [
     {
+      label: "Saturn",
       type: "planet",
       isGroupAnchor: true,
       radius: 58232, // Saturn standard,
@@ -91,6 +100,7 @@ export const sol: StarSystem = [
   ],
   [
     {
+      label: "Uranus",
       type: "planet",
       isGroupAnchor: true,
       radius: 25362, // Uranus standard,
@@ -103,6 +113,7 @@ export const sol: StarSystem = [
   ],
   [
     {
+      label: "Neptune",
       type: "planet",
       isGroupAnchor: true,
       radius: 24622, // Neptune standard,

@@ -5,12 +5,17 @@ import { Clock } from "./Clock.ts";
 
 const π = Math.PI;
 
+export type ActorType = "star" | "planet" | "moon" | "asteroid" | "ship";
+
 export interface _Params {
   clock: Clock;
+  textureLoader: THREE.TextureLoader;
+
   group?: THREE.Group;
   isGroupAnchor?: boolean;
 
-  type?: "star" | "planet" | "moon" | "ship" | "asteroid";
+  type: ActorType;
+  label: string;
 
   /** in kilograms */
   mass: number;
@@ -182,6 +187,9 @@ export class _ {
       const target = isGroupAnchor && this.group ? this.group : this.mesh;
       target?.position.set(x, y, z);
     }
+
+    // @ts-ignore
+    if (!window.MAXPOSITION || window.MAXPOSITION < Math.abs(x)) window.MAXPOSITION = Math.abs(x);
   }
 
   // in seconds
