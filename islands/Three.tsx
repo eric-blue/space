@@ -9,7 +9,8 @@ import { CameraControl } from "../actors/Camera.ts";
 import { Clock } from "../actors/Clock.ts";
 import { Skybox } from "../actors/Skybox.ts";
 import { Ship } from "../actors/Ship.ts";
-import { _ } from "../actors/_.tsx";
+import { _Params } from "../actors/_.tsx";
+import { sol } from "../db/sol.ts";
 
 const scene = new THREE.Scene()
 scene.fog = new THREE.Fog(0x292929, 10, 20)
@@ -17,8 +18,11 @@ const textureLoader = new THREE.TextureLoader(new THREE.LoadingManager())
 
 // const imageSrc = asset('/textures/skybox.png');
 
-type OrbitalGroup = _ | _[] | OrbitalGroup[]
-type StarSystem = [Star, OrbitalGroup]
+export interface OrbitalMember extends Omit<_Params, 'clock'|'color'> {
+  color?: string
+}
+export type OrbitalGroup = OrbitalMember | OrbitalMember[] | OrbitalGroup[]
+export type StarSystem = (Omit<Star['params'], 'clock'>|OrbitalGroup)[]
 
 function init() {
   const canvas = document.querySelector('.webgl') as HTMLCanvasElement;
@@ -40,63 +44,69 @@ function init() {
   const skybox = new Skybox;
   skybox.spawn(scene);
 
-  const star = new Star({
-    clock,
-    radius: SOLAR_RADIUS,
-    mass: SOLAR_MASS,
+  const system: Star[] = []
+  sol.map((celestial) => {
+    if ("type" in celestial) system.push(new Star({clock, ...celestial, color: new THREE.Color(celestial.color)}))
   })
-  star.spawn(scene);
+  system?.forEach((celestial) => celestial.spawn(scene))
 
-  const mars = new Planetary({
-    clock,
-    type: "planet",
-    radius: 3389500, // Mars standard
-    mass: 6.39e23, // Mars standard
-    gravityWellMass: 1.989e30, // Sun standard,
-    orbitalRadius: 227939200000, // Mars standard,
-    orbitalEccentricity: 0.6,
-    color: new THREE.Color(0xff0000),
-  })
-  mars.spawn(scene);
+  // const star = new Star({
+  //   clock,
+  //   radius: SOLAR_RADIUS,
+  //   mass: SOLAR_MASS,
+  // })
+  // star.spawn(scene);
 
-  const group = new THREE.Group()
-  const common = {clock, group}
-  const planet = new Planetary({
-    ...common,
-    type: "planet",
-    isGroupAnchor: true,
-    radius: 6371000, // Earth standard,
-    mass: 5.972e24, // Earth standard,
-    gravityWellMass: 1.989e30, // Sun standard,
-    orbitalRadius: 149598023000, // Earth standard,
-    orbitalEccentricity: 0.3, // Earth standard,
-    color: new THREE.Color(0x00ff00),
-  })
-  planet.spawn(scene);
+  // const mars = new Planetary({
+  //   clock,
+  //   type: "planet",
+  //   radius: 3389500, // Mars standard
+  //   mass: 6.39e23, // Mars standard
+  //   gravityWellMass: 1.989e30, // Sun standard,
+  //   orbitalRadius: 227939200000, // Mars standard,
+  //   orbitalEccentricity: 0.6,
+  //   color: new THREE.Color(0xff0000),
+  // })
+  // mars.spawn(scene);
 
-  const moon = new Planetary({
-    ...common,
-    type: "moon",
-    gravityWellMass: 5.972e24, // Earth standard,
-    radius: 1737100, // Moon standard,
-    mass: 7.348E22, // Moon standard,
-    orbitalRadius: 184400000, // Moon standard,
-    orbitalEccentricity: 0.6, // Moon standard,
-    color: new THREE.Color(0xaaaaaa),
-  })
-  moon.spawn(scene);
+  // const group = new THREE.Group()
+  // const common = {clock, group}
+  // const earth = new Planetary({
+  //   ...common,
+  //   type: "planet",
+  //   isGroupAnchor: true,
+  //   radius: 6371000, // Earth standard,
+  //   mass: 5.972e24, // Earth standard,
+  //   gravityWellMass: 1.989e30, // Sun standard,
+  //   orbitalRadius: 149598023000, // Earth standard,
+  //   orbitalEccentricity: 0.3, // Earth standard,
+  //   color: new THREE.Color(0x00ff00),
+  // })
+  // earth.spawn(scene);
 
-  const moon2 = new Planetary({
-    ...common,
-    type: "moon",
-    gravityWellMass: 5.972e24, // Earth standard,
-    radius: 1737100, // Moon standard,
-    mass: 7.34767309e25, // Moon standard,
-    orbitalRadius: 384400000, // Moon standard,
-    orbitalEccentricity: 0.6, // Moon standard,
-    color: new THREE.Color(0xffff00),
-  })
-  moon2.spawn(scene);
+  // const moon = new Planetary({
+  //   ...common,
+  //   type: "moon",
+  //   gravityWellMass: 5.972e24, // Earth standard,
+  //   radius: 1737100, // Moon standard,
+  //   mass: 7.348E22, // Moon standard,
+  //   orbitalRadius: 184400000, // Moon standard,
+  //   orbitalEccentricity: 0.6, // Moon standard,
+  //   color: new THREE.Color(0xaaaaaa),
+  // })
+  // moon.spawn(scene);
+
+  // const moon2 = new Planetary({
+  //   ...common,
+  //   type: "moon",
+  //   gravityWellMass: 5.972e24, // Earth standard,
+  //   radius: 1737100, // Moon standard,
+  //   mass: 7.34767309e25, // Moon standard,
+  //   orbitalRadius: 384400000, // Moon standard,
+  //   orbitalEccentricity: 0.6, // Moon standard,
+  //   color: new THREE.Color(0xffff00),
+  // })
+  // moon2.spawn(scene);
 
   const ship1 = new Ship({
     clock,
@@ -106,6 +116,8 @@ function init() {
     depth: 2406,
     radius: 682/2,
     mass: 24000000000,
+    energyOutput: 1e16, // joules
+    exhaustVelocity: 100000, // m/s
     gravityWellMass: 1.989e30, // Sun standard,
     orbitalRadius: 14959802300*2, // Earth standard,
     orbitalEccentricity: 0.8,
@@ -142,25 +154,25 @@ function init() {
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.setClearColor(0x292929)
 
-  cameraControl.setCameraFocus(planet.mesh)
+  cameraControl.setCameraFocus(ship1.mesh)
 
-  // @ts-expect-error
-  window.CAMERACONTROL = {
-    planet: () => cameraControl.setCameraFocus(planet.mesh),
-    moon: () => cameraControl.setCameraFocus(moon.mesh),
-    mars: () => cameraControl.setCameraFocus(mars.mesh),
-    star: () => cameraControl.setCameraFocus(star.mesh),
-    ship: () => cameraControl.setCameraFocus(ship1.mesh),
-    navigate: () => ship1.navigate()
-  }
+  // // @ts-expect-error
+  // window.CAMERACONTROL = {
+  //   earth: () => cameraControl.setCameraFocus(earth.mesh),
+  //   moon: () => cameraControl.setCameraFocus(moon.mesh),
+  //   mars: () => cameraControl.setCameraFocus(mars.mesh),
+  //   star: () => cameraControl.setCameraFocus(star.mesh),
+  //   ship: () => cameraControl.setCameraFocus(ship1.mesh),
+  //   navigate: () => ship1.navigate()
+  // }
 
   const tick = () => {
     const elapsed = clock.getElapsedTime()
 
-    mars.update()
-    planet.update()
-    moon.update()
-    moon2.update()
+    // mars.update()
+    // earth.update()
+    // moon.update()
+    // moon2.update()
     skybox.update()
     ship1.update()
 

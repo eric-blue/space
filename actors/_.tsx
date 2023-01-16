@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-import { G, SOLAR_RADIUS } from "../constants.ts";
+import { G, SOLAR_DIAMETER } from "../constants.ts";
 import { Clock } from "./Clock.ts";
 
 const π = Math.PI;
@@ -14,7 +14,12 @@ export interface _Params {
 
   /** in kilograms */
   mass: number;
+
+  energyOutput?: number; // joules
+  exhaustVelocity?: number; // m/s
+
   gravityWellMass?: number;
+
   /** in meters */
   radius: number;
 
@@ -33,8 +38,6 @@ export interface _Params {
    */
   orbitalEccentricity?: number;
 
-  initialVelocity?: number;
-
   // axialTilt?: number;
   // axialRotation?: number;
 
@@ -45,7 +48,19 @@ export class _ {
   params: _Params;
   mesh?: THREE.Mesh;
   group?: THREE.Group;
+
   orbitalPeriod?: number;
+
+  lastOrbitalRadius?: number;
+  lastOrbitalEccentricity?: number;
+  lastOrbitalInclination?: number;
+  lastX?: number;
+  lastY?: number;
+  lastZ?: number;
+
+  acceleration: number;
+  isNavigating: boolean;
+  elapsedWhileNavigating: number;
 
   constructor(geometry: THREE.BufferGeometry, material: THREE.Material, params: _Params) {
     this.params = params;
@@ -54,6 +69,18 @@ export class _ {
     this.group = params.group;
 
     this.orbitalPeriod = 0;
+    this.lastOrbitalRadius = params.orbitalRadius;
+    this.lastOrbitalEccentricity = params.orbitalEccentricity;
+    this.lastOrbitalInclination = params.orbitalInclination;
+
+    this.lastX;
+    this.lastY;
+    this.lastZ;
+
+    this.acceleration = 0;
+    this.isNavigating = false;
+    this.elapsedWhileNavigating = 0;
+
     this.setOrbitalPeriod();
   }
 
@@ -73,6 +100,7 @@ export class _ {
     const { clock } = this.params;
     const elapsed = clock.getElapsedTime();
 
+    this.setSpeed()
     this.setPosition(elapsed);
   }
 
@@ -86,7 +114,7 @@ export class _ {
     // maybe spawn wreckage? if ship, else spawn resources?
   }
 
-  setPosition(elapsed: number) {
+  setPosition(elapsed: number) { // on every frame
     const {
       orbitalRadius: major = 0,
       orbitalEccentricity: e = 0,
@@ -94,18 +122,65 @@ export class _ {
       isGroupAnchor,
     } = this.params;
 
+    let x, y, z;
+
     if (major && e !== undefined && this.orbitalPeriod && this.mesh) {
       const minor = major * Math.sqrt(1 - Math.pow(e, 2));
       const angularVelocity = ((2 * π) / this.orbitalPeriod);
       const meanAnomaly = angularVelocity * elapsed;
       const eccentricAnomaly = this.getEccentricAnomaly(meanAnomaly, meanAnomaly);
 
-      const x = getDerivedRadius(major * (Math.cos(eccentricAnomaly) - e))
-      const z = getDerivedRadius(minor * Math.sin(eccentricAnomaly))
+      x = normalizeSolTo3(major * (Math.cos(eccentricAnomaly) - e))
+      y = 0;
+      z = normalizeSolTo3(minor * Math.sin(eccentricAnomaly))
+
+      const finalPosition = new THREE.Vector3(x, y, z);
+
+      if (this.acceleration && (
+        major !== this.lastOrbitalRadius ||
+        e !== this.lastOrbitalEccentricity ||
+        inclination !== this.lastOrbitalInclination
+      )) {
+        this.isNavigating = true;
+
+        const {distanceInThree: distance, distanceInSol} = this.getDistanceBetweenPositions(
+          this.mesh.position,
+          finalPosition
+        );
+
+        const transitionDuration = Math.abs(distanceInSol / this.acceleration) // speed in m/s
+        const ratio = this.elapsedWhileNavigating / transitionDuration;
+        const t = Math.min(1, ratio);
+
+        if (this.lastX !== undefined && this.lastY !== undefined && this.lastZ !== undefined) {
+          // TODO: add interpolation between current orbital arc and new orbital arc rather than just falling into place
+          x = lerp(this.lastX, x, t);
+          y = lerp(this.lastY, y, t);
+          z = lerp(this.lastZ, z, t);
+        }
+
+        this.mesh.lookAt(finalPosition);
+
+        this.elapsedWhileNavigating += elapsed;
+
+        if (distance < 1) {
+          this.isNavigating = false;
+          this.elapsedWhileNavigating = 0;
+        }
+
+        this.lastX = x; this.lastY = y; this.lastZ = z;
+      }
+
+      if (!this.isNavigating) {
+        // Update the last orbital parameters
+        this.lastOrbitalRadius = major;
+        this.lastOrbitalEccentricity = e;
+        this.lastOrbitalInclination = inclination;
+
+      }
 
       const target = isGroupAnchor && this.group ? this.group : this.mesh;
-
-      target.position.set(x, 0, z);
+      target?.position.set(x, y, z);
     }
   }
 
@@ -118,6 +193,28 @@ export class _ {
     }
   }
 
+  setSpeed() {
+    const {mass, orbitalRadius = 0, energyOutput, exhaustVelocity} = this.params;
+
+    const currentVelocity = this.getAngularVelocity() * orbitalRadius; // m/s
+    const targetVelocity = currentVelocity; // m/s
+    // todo, targetVelocity should be based on the distance to the target
+
+    if (this.mesh?.name === "ship" && energyOutput && exhaustVelocity) {
+      let thrust;
+      if (currentVelocity > targetVelocity) {
+        thrust = -energyOutput / exhaustVelocity; // negative value for deceleration
+      } else {
+        thrust = energyOutput / exhaustVelocity;
+      }
+
+      this.acceleration = thrust / mass; // m/s^2
+    } else {
+      this.acceleration = 0; // TODO non-ship object via collision force
+    }
+  }
+
+  // radians/second
   getAngularVelocity() {
     return this.orbitalPeriod ? 2 * π / this.orbitalPeriod : 0;
   }
@@ -155,38 +252,53 @@ export class _ {
     return { L1: 0, L2: 0, L3: 0, L4: 0 };
   }
 
+  getDistanceBetweenPositions(position1: THREE.Vector3, position2: THREE.Vector3) {
+    const { x: x1, y: y1, z: z1 } = position1;
+    const { x: x2, y: y2, z: z2 } = position2;
+    const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2) + Math.pow(z2 - z1, 2));
+    return {
+      distanceInThree: distance,
+      distanceInSol: normalize3ToSol(distance)
+    };
+  }
+
   /** returns collision force in newtons */
   getCollisionForcePotential(opponent: _) {
     // this doesnt take into account real world units
-    const { mass: m1 } = this.params;
-    const { mass: m2 } = opponent.params;
-    if (m1 && m2 && this.mesh && opponent.mesh) {
-      const { x: x1, y: y1, z: z1 } = this.mesh.position;
-      const { x: x2, y: y2, z: z2 } = opponent.mesh.position;
-      const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2) + Math.pow(z2 - z1, 2));
-      const force = G * m1 * m2 / Math.pow(distance, 2);
-      const forceX = force * (x2 - x1) / distance;
-      const forceY = force * (y2 - y1) / distance;
-      const forceZ = force * (z2 - z1) / distance;
-      return { force, forceX, forceY, forceZ };
-    }
-    return { force: 0, forceX: 0, forceY: 0, forceZ: 0 };
+    // const { mass: m1 } = this.params;
+    // const { mass: m2 } = opponent.params;
+    // if (m1 && m2 && this.mesh && opponent.mesh) {
+    //   const { x: x1, y: y1, z: z1 } = this.mesh.position;
+    //   const { x: x2, y: y2, z: z2 } = opponent.mesh.position;
+    //   const distance = getDistanceBetweenPositions(this.mesh.position, opponent.mesh.position); need to convert to SOL UNITS
+    //   const force = G * m1 * m2 / Math.pow(distance, 2);
+    //   const forceX = force * (x2 - x1) / distance;
+    //   const forceY = force * (y2 - y1) / distance;
+    //   const forceZ = force * (z2 - z1) / distance;
+    //   return { force, forceX, forceY, forceZ };
+    // }
+    // return { force: 0, forceX: 0, forceY: 0, forceZ: 0 };
   }
 }
 
 /**
  * takes in a realworld measurement in meters and converts to
  * game logic where 1 unit = 1 solar radius
+ * @example
+ * normalizeSolTo3(695700000) // 1
  */
-export function getDerivedRadius(radius: number) {
-  return radius / SOLAR_RADIUS;
+export function normalizeSolTo3(unit: number) {
+  return unit / SOLAR_DIAMETER;
 }
 
 /**
- * takes in a game logic measurement in solar radii and
- * converts to realworld meters
+ * takes in a game logic measurement in solar radii and converts to
+ * realworld meters
+ * @example
+ * normalize3ToSol(1) // 695700000
  */
-export function getAppliedRadius(radius: number) {
-  return radius * SOLAR_RADIUS;
+export function normalize3ToSol(unit: number) {
+  return unit * SOLAR_DIAMETER;
 }
 
+const lerp = (start: number, end: number, t: number) => (1 - t) * start + t * end;

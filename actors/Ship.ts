@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ARTIFICIAL_SCALE_FACTOR } from "../constants.ts";
-import { getDerivedRadius, _, _Params } from "./_.tsx";
+import { normalizeSolTo3, _, _Params } from "./_.tsx";
 
 interface ShipParams extends _Params {
   color?: THREE.Color;
@@ -15,9 +15,9 @@ export class Ship extends _ {
 
   constructor(params: ShipParams) {
     const dimensions = {
-      width: getDerivedRadius(params.width / 2) * 2 * ARTIFICIAL_SCALE_FACTOR * 100,
-      height: getDerivedRadius(params.height / 2) * 2 * ARTIFICIAL_SCALE_FACTOR * 100,
-      depth: getDerivedRadius(params.depth / 2) * 2 * ARTIFICIAL_SCALE_FACTOR * 100,
+      width: normalizeSolTo3(params.width / 2) * 2 * ARTIFICIAL_SCALE_FACTOR * 100,
+      height: normalizeSolTo3(params.height / 2) * 2 * ARTIFICIAL_SCALE_FACTOR * 100,
+      depth: normalizeSolTo3(params.depth / 2) * 2 * ARTIFICIAL_SCALE_FACTOR * 100,
     }
 
     const geometry = new THREE.BoxGeometry(dimensions.depth, dimensions.height, dimensions.width);
@@ -29,7 +29,7 @@ export class Ship extends _ {
     super.update(params);
     if (!this.mesh) throw new Error("No mesh to update");
 
-    this.mesh.lookAt(new THREE.Vector3(0,0,0));
+    this.mesh.lookAt(this.group?.position ?? new THREE.Vector3(0,0,0));
   }
 
   spawn(scene: THREE.Scene) {
@@ -44,7 +44,7 @@ export class Ship extends _ {
 
     this.update({
       // random number between 10000000 and 24000000000
-      orbitalRadius: Math.floor(Math.random() * (24000000000 - 10000000 + 1) + 10000000),
+      orbitalRadius: Math.floor(Math.random() * (24000000000 - 100000000 + 1) + 10000000),
     });
   }
 }

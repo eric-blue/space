@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { getDerivedRadius, _, _Params } from "./_.tsx";
+import { normalizeSolTo3, _, _Params } from "./_.tsx";
 
 import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js';
 
@@ -16,7 +16,7 @@ export class Star extends _ {
   declare params: StarParams;
 
   constructor(params: StarParams) {
-    const derivedRadius = getDerivedRadius(params.radius);
+    const derivedRadius = normalizeSolTo3(params.radius);
     const geometry = new THREE.SphereGeometry(derivedRadius, 32, 32);
     const material = new THREE.MeshStandardMaterial({
       color: params.color ?? 0xffffff,
