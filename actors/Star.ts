@@ -18,7 +18,7 @@ export class Star extends _ {
     const geometry = new THREE.SphereGeometry(derivedRadius, 32, 32);
     const material = new THREE.MeshStandardMaterial({
       color: params.color ?? 0xffffff,
-      visible: false,
+      // visible: false,
       fog: false,
     });
     super(geometry, material, {...params, type: 'star'});
@@ -27,6 +27,7 @@ export class Star extends _ {
   spawn(scene: THREE.Scene) {
     super.spawn(scene);
     if (!this.mesh) throw new Error("No mesh to spawn");
+    const derivedRadius = normalizeSolTo3(this.params.radius);
 
     const {textureLoader} = this.params;
 
@@ -62,7 +63,29 @@ export class Star extends _ {
 
     addLight( 0.995, 0.5, 0.9 );
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5), pointLight)
-  }
+    const marker = new THREE.Mesh(
+      new THREE.CircleGeometry(derivedRadius - 0.1, 32, 32),
+      new THREE.MeshStandardMaterial({
+        color: 0x000000,
+        fog: false,
+        transparent: true,
+      })
+    )
+    marker.castShadow = false;
+    marker.rotation.x = -Math.PI * 0.5
+    marker.position.y = this.mesh.position.z - 3
 
+    const pin = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.01, 0.01, 3, 32, 32),
+      new THREE.MeshPhongMaterial({
+        color: 0xffffff,
+        fog: false,
+        transparent: true,
+      })
+    )
+    pin.castShadow = false;
+    pin.position.y = this.mesh.position.z + 2.25
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5), pointLight, marker, pin)
+  }
 }
