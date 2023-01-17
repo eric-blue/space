@@ -1,16 +1,16 @@
 import { asset } from "$fresh/runtime.ts";
 
 import * as THREE from "three";
-import { normalizeSolTo3, _, _Params } from "./_.tsx";
+import { normalizeSolTo3, Actor, ActorParams } from "./Actor.tsx";
 
 import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js';
 
-export interface StarParams extends Omit<_Params, 'receiveShadow'> {
+export interface StarParams extends Omit<ActorParams, 'receiveShadow'> {
   color?: THREE.Color;
   intensity?: number;
 }
 
-export class Star extends _ {
+export class Star extends Actor {
   declare params: StarParams;
 
   constructor(params: StarParams) {
@@ -18,7 +18,6 @@ export class Star extends _ {
     const geometry = new THREE.SphereGeometry(derivedRadius, 32, 32);
     const material = new THREE.MeshStandardMaterial({
       color: params.color ?? 0xffffff,
-      // visible: false,
       fog: false,
     });
     super(geometry, material, {...params, type: 'star'});
@@ -53,7 +52,7 @@ export class Star extends _ {
       scene.add( light );
 
       const lensflare = new Lensflare();
-      lensflare.addElement( new LensflareElement( textureFlare0, 700, 0, light.color ) );
+      lensflare.addElement( new LensflareElement( textureFlare0, 300, 0, light.color ) );
       lensflare.addElement( new LensflareElement( textureFlare3, 60, 0.2 ) );
       lensflare.addElement( new LensflareElement( textureFlare3, 70, 0.3 ) );
       lensflare.addElement( new LensflareElement( textureFlare3, 120, 0.35 ) );
@@ -73,7 +72,7 @@ export class Star extends _ {
     )
     marker.castShadow = false;
     marker.rotation.x = -Math.PI * 0.5
-    marker.position.y = this.mesh.position.z - 3
+    marker.position.y = this.mesh.position.z - 3.1
 
     const pin = new THREE.Mesh(
       new THREE.CylinderGeometry(0.01, 0.01, 3, 32, 32),

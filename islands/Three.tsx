@@ -6,7 +6,7 @@ import { CameraControl } from "../actors/Camera.ts";
 import { Clock } from "../actors/Clock.ts";
 import { Skybox } from "../actors/Skybox.ts";
 import { Ship } from "../actors/Ship.ts";
-import { _Params } from "../actors/_.tsx";
+import { ActorParams } from "../actors/Actor.tsx";
 
 import { sol } from "../db/sol.ts";
 
@@ -15,7 +15,7 @@ scene.fog = new THREE.Fog(0x292929, 0.01, 80)
 
 const textureLoader = new THREE.TextureLoader(new THREE.LoadingManager())
 
-export interface OrbitalMember extends Omit<_Params, 'clock'|'color'|'textureLoader'> {
+export interface OrbitalMember extends Omit<ActorParams, 'clock'|'color'|'textureLoader'> {
   color?: string
 }
 export type OrbitalGroup = OrbitalMember | OrbitalMember[] | OrbitalGroup[]
@@ -100,7 +100,7 @@ function init() {
   renderer.setClearColor(0x292929)
 
   // @ts-expect-error
-  cameraControl.setCameraFocus(window.SYSTEM?.Earth?.mesh ?? kolkata.mesh)
+  cameraControl.setCameraFocus(window.SYSTEM?.Mercury?.mesh ?? kolkata.mesh)
 
   const tick = () => {
     const elapsed = clock.getElapsedTime()

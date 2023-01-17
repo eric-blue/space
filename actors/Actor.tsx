@@ -7,7 +7,7 @@ const π = Math.PI;
 
 export type ActorType = "star" | "planet" | "moon" | "asteroid" | "ship";
 
-export interface _Params {
+export interface ActorParams {
   clock: Clock;
   textureLoader: THREE.TextureLoader;
 
@@ -49,8 +49,8 @@ export interface _Params {
   spinRate?: number; // todo
 }
 
-export class _ {
-  params: _Params;
+export class Actor {
+  params: ActorParams;
   mesh?: THREE.Mesh;
   group?: THREE.Group;
 
@@ -67,7 +67,7 @@ export class _ {
   isNavigating: boolean;
   elapsedWhileNavigating: number;
 
-  constructor(geometry: THREE.BufferGeometry, material: THREE.Material, params: _Params) {
+  constructor(geometry: THREE.BufferGeometry, material: THREE.Material, params: ActorParams) {
     this.params = params;
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.name = params.type ?? "actor";
@@ -100,7 +100,7 @@ export class _ {
     this.update();
   }
 
-  update(params?: Partial<Omit<_Params, 'clock'>>) {
+  update(params?: Partial<Omit<ActorParams, 'clock'>>) {
     this.params = {...this.params, ...params};
     const { clock } = this.params;
     const elapsed = clock.getElapsedTime();
@@ -123,7 +123,7 @@ export class _ {
     const {
       orbitalRadius: major = 0,
       orbitalEccentricity: e = 0,
-      orbitalInclination: inclination = 0,
+      orbitalInclination: inclination = 0.00001,
       isGroupAnchor,
     } = this.params;
 
@@ -134,10 +134,11 @@ export class _ {
       const angularVelocity = ((2 * π) / this.orbitalPeriod);
       const meanAnomaly = angularVelocity * elapsed;
       const eccentricAnomaly = this.getEccentricAnomaly(meanAnomaly, meanAnomaly);
+      const inclinationInRadians = inclination * (π / 180);
 
-      x = normalizeSolTo3(major * (Math.cos(eccentricAnomaly) - e))
-      y = 0;
-      z = normalizeSolTo3(minor * Math.sin(eccentricAnomaly))
+      x = normalizeSolTo3(major * (Math.cos(eccentricAnomaly) - e));
+      y = normalizeSolTo3(minor * Math.sin(eccentricAnomaly) * Math.sin(inclinationInRadians));
+      z = normalizeSolTo3(minor * Math.sin(eccentricAnomaly) * Math.cos(inclinationInRadians));
 
       const finalPosition = new THREE.Vector3(x, y, z);
 
@@ -159,6 +160,7 @@ export class _ {
 
         if (this.lastX !== undefined && this.lastY !== undefined && this.lastZ !== undefined) {
           // TODO: add interpolation between current orbital arc and new orbital arc rather than just falling into place
+          // need to target a future point in the new orbit based on projected time to reach it
           x = lerp(this.lastX, x, t);
           y = lerp(this.lastY, y, t);
           z = lerp(this.lastZ, z, t);
@@ -188,7 +190,7 @@ export class _ {
       target?.position.set(x, y, z);
     }
 
-    // @ts-ignore
+    // @ts-ignore debug
     if (!window.MAXPOSITION || window.MAXPOSITION < Math.abs(x)) window.MAXPOSITION = Math.abs(x);
   }
 
@@ -244,7 +246,7 @@ export class _ {
       : ENew;
   }
 
-  getLagrangePoints(secondaryBody: _) {
+  getLagrangePoints(secondaryBody: Actor) {
     const { mass: m1 } = this.params;
     const { mass: m2 } = secondaryBody.params;
     if (m1 && m2) {
@@ -271,7 +273,7 @@ export class _ {
   }
 
   /** returns collision force in newtons */
-  getCollisionForcePotential(opponent: _) {
+  getCollisionForcePotential(opponent: Actor) {
     // this doesnt take into account real world units
     // const { mass: m1 } = this.params;
     // const { mass: m2 } = opponent.params;

@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { ARTIFICIAL_SCALE_FACTOR } from "../constants.ts";
-import { normalizeSolTo3, _, _Params } from "./_.tsx";
+import { normalizeSolTo3, Actor, ActorParams } from "./Actor.tsx";
 
-interface ShipParams extends _Params {
+interface ShipParams extends ActorParams {
   color?: THREE.Color;
 
   width: number;
@@ -10,7 +10,7 @@ interface ShipParams extends _Params {
   depth: number;
 }
 
-export class Ship extends _ {
+export class Ship extends Actor {
   declare params: ShipParams;
 
   constructor(params: ShipParams) {
@@ -25,7 +25,7 @@ export class Ship extends _ {
     super(geometry, material, params);
   }
 
-  update(params?: Partial<Omit<_Params, "clock">> | undefined): void {
+  update(params?: Partial<Omit<ActorParams, "clock">> | undefined): void {
     super.update(params);
     if (!this.mesh) throw new Error("No mesh to update");
 
