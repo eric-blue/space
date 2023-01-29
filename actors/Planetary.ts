@@ -2,11 +2,13 @@ import * as THREE from "three";
 import { ARTIFICIAL_SCALE_FACTOR } from "../constants.ts";
 import { normalizeSolTo3, Actor, ActorParams } from "./Actor.tsx";
 
-interface PlanetaryParams extends ActorParams {
+interface Params {
   color?: THREE.Color;
 }
 
-export class Planetary extends Actor {
+export type PlanetaryParams = Params & ActorParams;
+
+export class Planetary extends Actor<Params> {
   declare params: PlanetaryParams;
 
   constructor(params: PlanetaryParams) {

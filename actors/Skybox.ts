@@ -10,8 +10,8 @@ for (let i = 0; i < count * 3; i++) {
 particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
 
 export class Skybox {
-  particles: THREE.Points<THREE.BufferGeometry,THREE.PointsMaterial>;
-  plane: THREE.Mesh<THREE.PlaneGeometry,THREE.MeshStandardMaterial>;
+  particles: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>;
+  plane: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshPhongMaterial>;
 
   constructor() {
     this.particles = new THREE.Points(
@@ -28,12 +28,13 @@ export class Skybox {
 
     this.plane = new THREE.Mesh(
       new THREE.PlaneGeometry(5000, 5000, 1000, 1000),
-      new THREE.MeshStandardMaterial({
-        color: new THREE.Color(0xaaaaaa),
+      new THREE.MeshPhongMaterial({
+        // color: new THREE.Color(424242),
+        color: new THREE.Color(0x424242),
         wireframe: true,
-        transparent: true,
-        wireframeLinewidth: 0.5,
-        opacity: 0.25,
+        // transparent: true,
+        wireframeLinewidth: 1,
+        opacity: 0.95,
       })
     )
 

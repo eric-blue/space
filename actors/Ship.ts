@@ -2,15 +2,16 @@ import * as THREE from "three";
 import { ARTIFICIAL_SCALE_FACTOR } from "../constants.ts";
 import { normalizeSolTo3, Actor, ActorParams } from "./Actor.tsx";
 
-interface ShipParams extends ActorParams {
+interface Params {
   color?: THREE.Color;
-
   width: number;
   height: number;
   depth: number;
 }
 
-export class Ship extends Actor {
+export type ShipParams = Params & ActorParams;
+
+export class Ship extends Actor<Params> {
   declare params: ShipParams;
 
   constructor(params: ShipParams) {

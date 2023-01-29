@@ -1,4 +1,7 @@
+import { asset } from "$fresh/runtime.ts";
+
 import * as THREE from "three";
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 import { G, SOLAR_DIAMETER } from "../constants.ts";
 import { Clock } from "./Clock.ts";
@@ -9,7 +12,8 @@ export type ActorType = "star" | "planet" | "moon" | "asteroid" | "ship";
 
 export interface ActorParams {
   clock: Clock;
-  textureLoader: THREE.TextureLoader;
+  textureLoader?: THREE.TextureLoader;
+  gltfLoader?: GLTFLoader;
 
   group?: THREE.Group;
   isGroupAnchor?: boolean;
@@ -47,12 +51,28 @@ export interface ActorParams {
   // axialRotation?: number;
 
   spinRate?: number; // todo
+
+  clickable?: boolean;
 }
 
-export class Actor {
+enum ActorStatus {
+  STABLE = "stable",
+  ACCELERATING = "accelerating",
+  DECELERATING = "decelerating",
+  DESTROYED = "destroyed",
+}
+
+// @EventEmitter
+export class Actor<T = Record<string | number | symbol, never>> {
   params: ActorParams;
   mesh?: THREE.Mesh;
   group?: THREE.Group;
+
+  status: ActorStatus;
+
+  line: THREE.Line;
+  orbitalPath: Float32Array;
+  orbitalPathAttribute: THREE.Float32BufferAttribute;
 
   orbitalPeriod?: number;
 
@@ -67,11 +87,27 @@ export class Actor {
   isNavigating: boolean;
   elapsedWhileNavigating: number;
 
-  constructor(geometry: THREE.BufferGeometry, material: THREE.Material, params: ActorParams) {
+  constructor(geometry: THREE.BufferGeometry, material: THREE.Material, params: ActorParams & T) {
     this.params = params;
+    this.status = ActorStatus.STABLE;
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.name = params.type ?? "actor";
+
     this.group = params.group;
+
+    this.line = new THREE.Line(
+      new THREE.BufferGeometry(),
+      new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.5,
+      }),
+    );
+    this.line.name = "orbital path";
+
+    this.orbitalPath = new Float32Array(360 * 3 * 3 * 3);
+    this.orbitalPathAttribute = new THREE.Float32BufferAttribute(this.orbitalPath, 3);
+    this.line.geometry.setAttribute("position", this.orbitalPathAttribute);
 
     this.orbitalPeriod = 0;
     this.lastOrbitalRadius = params.orbitalRadius;
@@ -97,6 +133,21 @@ export class Actor {
       if (this.params.isGroupAnchor) scene.add(this.group);
     }
 
+    // this.params.gltfLoader?.load(
+    //   asset('/models/opensourceasset.gltf'),
+    //   (gltf) =>
+    //   {
+    //     // gltf.scene.scale.set(0.025, 0.025, 0.025)
+    //     scene.add(gltf.scene)
+    //   }
+    // )
+
+    this.params.clickable && this.mesh?.addEventListener("click", () => {
+      console.log("clicked", this.params.label);
+    });
+
+    scene.add(this.line);
+
     this.update();
   }
 
@@ -115,36 +166,49 @@ export class Actor {
     scene.remove(this.mesh);
     this.mesh.removeFromParent();
     this.mesh = undefined;
+    this.status = ActorStatus.DESTROYED;
 
     // maybe spawn wreckage? if ship, else spawn resources?
   }
 
-  setPosition(elapsed: number) { // on every frame
+  calculatePosition(elapsed = 1, i = 1) {
     const {
       orbitalRadius: major = 0,
       orbitalEccentricity: e = 0,
       orbitalInclination: inclination = 0.00001,
-      isGroupAnchor,
     } = this.params;
 
-    let x, y, z;
-
-    if (major && e !== undefined && this.orbitalPeriod && this.mesh) {
+    if (major && e !== undefined && this.orbitalPeriod) {
       const minor = major * Math.sqrt(1 - Math.pow(e, 2));
       const angularVelocity = ((2 * π) / this.orbitalPeriod);
-      const meanAnomaly = angularVelocity * elapsed;
+      const meanAnomaly = i * angularVelocity * elapsed;
       const eccentricAnomaly = this.getEccentricAnomaly(meanAnomaly, meanAnomaly);
       const inclinationInRadians = inclination * (π / 180);
 
-      x = normalizeSolTo3(major * (Math.cos(eccentricAnomaly) - e));
-      y = normalizeSolTo3(minor * Math.sin(eccentricAnomaly) * Math.sin(inclinationInRadians));
-      z = normalizeSolTo3(minor * Math.sin(eccentricAnomaly) * Math.cos(inclinationInRadians));
+      return {
+        x: normalizeSolTo3(major * (Math.cos(eccentricAnomaly) - e)),
+        y: normalizeSolTo3(minor * Math.sin(eccentricAnomaly) * Math.sin(inclinationInRadians)),
+        z: normalizeSolTo3(minor * Math.sin(eccentricAnomaly) * Math.cos(inclinationInRadians)),
+        major, minor, eccentricity: e, inclination
+      }
+    }
+    return {x: 0, y: 0, z: 0, major, minor: 0, eccentricity: e, inclination};
+  }
+
+  setPosition(elapsed: number) { // on every frame
+    let x, y, z;
+
+    if (this.mesh) {
+      const {major, eccentricity, inclination, ...position} = this.calculatePosition(elapsed);
+      x = position.x;
+      y = position.y;
+      z = position.z;
 
       const finalPosition = new THREE.Vector3(x, y, z);
 
       if (this.acceleration && (
         major !== this.lastOrbitalRadius ||
-        e !== this.lastOrbitalEccentricity ||
+        eccentricity !== this.lastOrbitalEccentricity ||
         inclination !== this.lastOrbitalInclination
       )) {
         this.isNavigating = true;
@@ -181,12 +245,13 @@ export class Actor {
       if (!this.isNavigating) {
         // Update the last orbital parameters
         this.lastOrbitalRadius = major;
-        this.lastOrbitalEccentricity = e;
+        this.lastOrbitalEccentricity = eccentricity;
         this.lastOrbitalInclination = inclination;
-
       }
 
-      const target = isGroupAnchor && this.group ? this.group : this.mesh;
+      this.drawOrbitalPath(elapsed);
+
+      const target = this.params.isGroupAnchor && this.group ? this.group : this.mesh;
       target?.position.set(x, y, z);
     }
 
@@ -214,8 +279,10 @@ export class Actor {
       let thrust;
       if (currentVelocity > targetVelocity) {
         thrust = -energyOutput / exhaustVelocity; // negative value for deceleration
+        this.status = ActorStatus.DECELERATING;
       } else {
         thrust = energyOutput / exhaustVelocity;
+        this.status = ActorStatus.ACCELERATING;
       }
 
       this.acceleration = thrust / mass; // m/s^2
@@ -288,6 +355,10 @@ export class Actor {
     //   return { force, forceX, forceY, forceZ };
     // }
     // return { force: 0, forceX: 0, forceY: 0, forceZ: 0 };
+  }
+
+  drawOrbitalPath(elapsed: number) {
+    // idk
   }
 }
 

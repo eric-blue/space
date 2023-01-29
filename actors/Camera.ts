@@ -18,7 +18,7 @@ export class CameraControl {
     this.camera = new THREE.PerspectiveCamera(
       100,
       window.innerWidth / window.innerHeight,
-      0.00001,
+      0.000001,
       1000
     );
     this.camera.position.set(0, 0, .05);
@@ -28,12 +28,7 @@ export class CameraControl {
     this.enableTracking = true
     this.lastTracked = null // should default to player actor
 
-    this.keyState = {
-      shiftRight  : false,
-      shiftLeft   : false,
-      controlRight: false,
-      controlLeft : false,
-    };
+    this.keyState = {shiftRight: false, shiftLeft: false, controlRight: false, controlLeft: false};
 
     const updateConfig = () => {
       if ( this.keyState.shiftRight || this.keyState.shiftLeft ) {

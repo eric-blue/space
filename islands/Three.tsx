@@ -1,4 +1,9 @@
 import * as THREE from "three";
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+// Two options for Fleet Engagements
+  // - snapshot and overlay to find collisions
+  // - physics engine => import RAPIER from 'https://cdn.skypack.dev/@dimforge/rapier3d-compat'; https://rapier.rs/docs/user_guides/javascript/getting_started_js
+
 import { useEffect } from "preact/hooks";
 import { Star } from "../actors/Star.ts";
 import { Planetary } from "../actors/Planetary.ts";
@@ -9,11 +14,13 @@ import { Ship } from "../actors/Ship.ts";
 import { ActorParams } from "../actors/Actor.tsx";
 
 import { sol } from "../db/sol.ts";
+import { render } from "https://esm.sh/v99/preact@10.11.0/src/index";
 
-const scene = new THREE.Scene()
-scene.fog = new THREE.Fog(0x292929, 0.01, 80)
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x292929, 0.01, 3000);
 
-const textureLoader = new THREE.TextureLoader(new THREE.LoadingManager())
+const textureLoader = new THREE.TextureLoader(new THREE.LoadingManager());
+const gltfLoader = new GLTFLoader();
 
 export interface OrbitalMember extends Omit<ActorParams, 'clock'|'color'|'textureLoader'> {
   color?: string
@@ -26,8 +33,27 @@ function init() {
   if (!canvas) return;
 
   const cameraControl = new CameraControl({canvas})
-  // @ts-expect-error
+  // @ts-expect-error clock
   const clock = window.CLOCK = new Clock();
+
+  const raycaster = new THREE.Raycaster();
+  let topIntersect: THREE.Mesh|null = null;
+
+  const mouse = new THREE.Vector2();
+  addEventListener('mousemove', (event) => {
+    mouse.x = (event.clientX / sizes.width) * 2 - 1;
+    mouse.y = - (event.clientY / sizes.height) * 2 + 1;
+  });
+
+  addEventListener('click', () => {
+    // if (topIntersect) cameraControl.setCameraFocus(topIntersect);
+    if (topIntersect) console.log(topIntersect);
+  })
+
+  // const intersect = raycaster.intersectObject()
+  const intersects = raycaster.intersectObjects(scene.children);
+  console.log(intersects);
+
 
   const skybox = new Skybox;
   skybox.spawn(scene);
@@ -35,6 +61,7 @@ function init() {
   const kolkata = new Ship({
     clock,
     textureLoader,
+    gltfLoader,
     label: "The Kolkata",
     type: "ship",
     width: 682,
@@ -48,6 +75,7 @@ function init() {
     orbitalRadius: 14959802300*2, // Earth standard,
     orbitalEccentricity: 0.8,
     color: new THREE.Color(0xffff00),
+    clickable: true,
   })
   kolkata.spawn(scene);
 
@@ -80,16 +108,19 @@ function init() {
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
   })
 
-  addEventListener('dblclick', () => {
-    // @ts-expect-error: safari needs an adult
-    const full = document.fullscreenElement || document.webkitFullscreenElement
-    // @ts-expect-error: safari needs an adult
-    if (!full) canvas.requestFullscreen?.() || canvas.webkitRequestFullscreen()
-    // @ts-expect-error: safari needs an adult
-    else document.exitFullscreen?.() ?? document.webkitExitFullscreen
-  })
+  // addEventListener('dblclick', () => {
+  //   // @ts-expect-error: safari needs an adult
+  //   const full = document.fullscreenElement || document.webkitFullscreenElement
+  //   // @ts-expect-error: safari needs an adult
+  //   if (!full) canvas.requestFullscreen?.() || canvas.webkitRequestFullscreen()
+  //   // @ts-expect-error: safari needs an adult
+  //   else document.exitFullscreen?.() ?? document.webkitExitFullscreen
+  // })
 
-  const renderer = new THREE.WebGLRenderer({canvas})
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+  })
   renderer.setSize(sizes.width, sizes.height)
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
@@ -98,9 +129,12 @@ function init() {
   renderer.physicallyCorrectLights = true;
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.setClearColor(0x292929)
+  renderer.physicallyCorrectLights = true;
+  // renderer.outputEncoding = THREE.sRGBEncoding;
 
-  // @ts-expect-error
-  cameraControl.setCameraFocus(window.SYSTEM?.Mercury?.mesh ?? kolkata.mesh)
+  // cameraControl.setCameraFocus(kolkata.mesh)
+  // @ts-expect-error: for debug
+  cameraControl.setCameraFocus(window.SYSTEM?.Earth?.mesh ?? kolkata.mesh)
 
   const tick = () => {
     const elapsed = clock.getElapsedTime()
@@ -116,6 +150,18 @@ function init() {
     // moon?.mesh.rotation.y = 0.015 * elapsed
     // group.rotation.y = 5 * elapsed
     // star.mesh.rotation.y = 0.01 * elapsed
+
+    raycaster.setFromCamera(mouse, cameraControl.camera);
+    const intersects = raycaster.intersectObjects(
+      system?.map((celestial) => celestial.mesh as THREE.Mesh) ?? []
+    );
+    // console.log(intersects);
+    for (const intersect of intersects) {
+      // if (intersect.object.userData.clickable) {
+        topIntersect = intersect.object.type === "Mesh" ? intersect.object as THREE.Mesh : null;
+        console.log(topIntersect)
+      // }
+    }
 
     requestAnimationFrame(tick);
 
@@ -152,7 +198,9 @@ const buildSystem = (data: StarSystem, clock: Clock, textureLoader: THREE.Textur
           if (orbitalMember.type === "star") system.push(new Star(params))
           else system.push(new Planetary(params))
         }
-        else {} // sub orbitalGroup
+        else {
+          // sub orbitalGroup
+        }
       });
     }
   });

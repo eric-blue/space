@@ -5,12 +5,14 @@ import { normalizeSolTo3, Actor, ActorParams } from "./Actor.tsx";
 
 import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js';
 
-export interface StarParams extends Omit<ActorParams, 'receiveShadow'> {
+interface Params {
   color?: THREE.Color;
   intensity?: number;
 }
 
-export class Star extends Actor {
+export type StarParams = Params & ActorParams;
+
+export class Star extends Actor<Params> {
   declare params: StarParams;
 
   constructor(params: StarParams) {
@@ -30,12 +32,13 @@ export class Star extends Actor {
 
     const {textureLoader} = this.params;
 
-    const textureFlare0 = textureLoader.load( asset('/textures/lensflare0.png') );
-    const textureFlare3 = textureLoader.load( asset('/textures/lensflare3.png') );
+    const textureFlare0 = textureLoader?.load( asset('/textures/lensflare0.png') );
+    const textureFlare3 = textureLoader?.load( asset('/textures/lensflare3.png') );
 
     const pointLight = new THREE.PointLight(0xffffff, this.params.intensity ?? 30, 100000, 0.5)
     pointLight.position.set(this.mesh.position.x, this.mesh.position.y, this.mesh.position.z)
     pointLight.castShadow = true
+    pointLight.shadow.normalBias = 0.05
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 2)
     directionalLight.position.set(this.mesh.position.x, 0, this.mesh.position.z - 5)
