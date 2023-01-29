@@ -14,7 +14,6 @@ import { Ship } from "../actors/Ship.ts";
 import { ActorParams } from "../actors/Actor.tsx";
 
 import { sol } from "../db/sol.ts";
-import { render } from "https://esm.sh/v99/preact@10.11.0/src/index";
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x292929, 0.01, 3000);
@@ -97,7 +96,6 @@ function init() {
     }
   })
 
-
   let sizes = { width: innerWidth, height: innerHeight }
 
   addEventListener('resize', () => {
@@ -132,9 +130,8 @@ function init() {
   renderer.physicallyCorrectLights = true;
   // renderer.outputEncoding = THREE.sRGBEncoding;
 
-  // cameraControl.setCameraFocus(kolkata.mesh)
   // @ts-expect-error: for debug
-  cameraControl.setCameraFocus(window.SYSTEM?.Earth?.mesh ?? kolkata.mesh)
+  cameraControl.setCameraFocus(window.SYSTEM?.Jupiter?.mesh ?? kolkata.mesh)
 
   const tick = () => {
     const elapsed = clock.getElapsedTime()
@@ -155,12 +152,10 @@ function init() {
     const intersects = raycaster.intersectObjects(
       system?.map((celestial) => celestial.mesh as THREE.Mesh) ?? []
     );
-    // console.log(intersects);
     for (const intersect of intersects) {
       // if (intersect.object.userData.clickable) {
-        topIntersect = intersect.object.type === "Mesh" ? intersect.object as THREE.Mesh : null;
-        console.log(topIntersect)
-      // }
+      topIntersect = intersect.object.type === "Mesh" ? intersect.object as THREE.Mesh : null;
+      console.log(topIntersect)
     }
 
     requestAnimationFrame(tick);
