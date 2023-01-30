@@ -21,8 +21,13 @@ export class Planetary extends Actor<Params> {
   spawn(scene: THREE.Scene) {
     super.spawn(scene);
     if (!this.mesh) throw new Error("No mesh to spawn");
-
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
+  }
+
+  update() {
+    super.update();
+    if (!this.mesh) throw new Error("No mesh to update");
+    this.mesh.rotation.y += 0.001; // TODO: make this calc
   }
 }

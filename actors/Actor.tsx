@@ -55,7 +55,7 @@ export interface ActorParams {
   clickable?: boolean;
 }
 
-enum ActorStatus {
+export enum ActorStatus {
   STABLE = "stable",
   ACCELERATING = "accelerating",
   DECELERATING = "decelerating",
@@ -105,7 +105,7 @@ export class Actor<T = Record<string | number | symbol, never>> {
     );
     this.line.name = "orbital path";
 
-    this.orbitalPath = new Float32Array(360 * 3 * 3 * 3);
+    this.orbitalPath = new Float32Array(361 * 3);
     this.orbitalPathAttribute = new THREE.Float32BufferAttribute(this.orbitalPath, 3);
     this.line.geometry.setAttribute("position", this.orbitalPathAttribute);
 
@@ -127,10 +127,11 @@ export class Actor<T = Record<string | number | symbol, never>> {
 
   spawn(scene: THREE.Scene) {
     if (!this.mesh) throw new Error("No mesh to spawn");
-    if (!this.group) scene.add(this.mesh);
+    if (!this.group) scene.add(this.mesh, this.line);
     else {
       this.group.add(this.mesh);
-      if (this.params.isGroupAnchor) scene.add(this.group);
+      if (this.params.isGroupAnchor) scene.add(this.group, this.line);
+      else scene.add(this.line);
     }
 
     // this.params.gltfLoader?.load(
@@ -141,12 +142,6 @@ export class Actor<T = Record<string | number | symbol, never>> {
     //     scene.add(gltf.scene)
     //   }
     // )
-
-    this.params.clickable && this.mesh?.addEventListener("click", () => {
-      console.log("clicked", this.params.label);
-    });
-
-    scene.add(this.line);
 
     this.update();
   }
@@ -211,23 +206,25 @@ export class Actor<T = Record<string | number | symbol, never>> {
         eccentricity !== this.lastOrbitalEccentricity ||
         inclination !== this.lastOrbitalInclination
       )) {
-        this.isNavigating = true;
-
         const {distanceInThree: distance, distanceInSol} = this.getDistanceBetweenPositions(
           this.mesh.position,
           finalPosition
         );
 
-        const transitionDuration = Math.abs(distanceInSol / this.acceleration) // speed in m/s
-        const ratio = this.elapsedWhileNavigating / transitionDuration;
-        const t = Math.min(1, ratio);
+        console.log(this.acceleration)
 
         if (this.lastX !== undefined && this.lastY !== undefined && this.lastZ !== undefined) {
-          // TODO: add interpolation between current orbital arc and new orbital arc rather than just falling into place
-          // need to target a future point in the new orbit based on projected time to reach it
-          x = lerp(this.lastX, x, t);
-          y = lerp(this.lastY, y, t);
-          z = lerp(this.lastZ, z, t);
+          this.isNavigating = true;
+          const transitionDuration = Math.abs(distanceInSol / this.acceleration) // speed in m/s
+          const ratio = this.elapsedWhileNavigating / transitionDuration;
+          const t = Math.min(1, ratio);
+          const deltaT = transitionDuration * t;
+
+          const {x: futureX, y: futureY, z: futureZ} = this.calculatePosition(elapsed + deltaT);
+
+          x = lerp(this.lastX, futureX, t);
+          y = lerp(this.lastY, futureY, t);
+          z = lerp(this.lastZ, futureZ, t);
         }
 
         this.mesh.lookAt(finalPosition);
@@ -260,7 +257,7 @@ export class Actor<T = Record<string | number | symbol, never>> {
   }
 
   // in seconds
-  setOrbitalPeriod() {
+  setOrbitalPeriod() { // need to update when navigating
     const { gravityWellMass, orbitalRadius: semiMajorAxis } = this.params;
     const μ = G * (gravityWellMass ?? 0);
     if (semiMajorAxis) {
@@ -280,9 +277,12 @@ export class Actor<T = Record<string | number | symbol, never>> {
       if (currentVelocity > targetVelocity) {
         thrust = -energyOutput / exhaustVelocity; // negative value for deceleration
         this.status = ActorStatus.DECELERATING;
-      } else {
+      } else if (currentVelocity < targetVelocity) {
         thrust = energyOutput / exhaustVelocity;
         this.status = ActorStatus.ACCELERATING;
+      } else {
+        thrust = 0;
+        this.status = ActorStatus.STABLE;
       }
 
       this.acceleration = thrust / mass; // m/s^2
@@ -358,7 +358,30 @@ export class Actor<T = Record<string | number | symbol, never>> {
   }
 
   drawOrbitalPath(elapsed: number) {
-    // idk
+    const {major, minor, inclination = 0} = this.calculatePosition(1);
+
+    if (major) {
+      const inclinationInRadians = inclination * (π / 180);
+      const radiusX = normalizeSolTo3(major);
+      const radiusY = normalizeSolTo3(minor);
+      const center = !this.params.isGroupAnchor
+        ? this.group?.position ?? new THREE.Vector3(0, 0, 0)
+        : new THREE.Vector3(0, 0, 0);
+
+      const points = [];
+
+      for (let i = 0; i < 361; i++) {
+        const theta = (i * Math.PI) / 180;
+        const x = center.x + radiusX * Math.cos(theta);
+        const y = center.y + radiusY * Math.sin(theta) * Math.sin(inclinationInRadians);
+        const z = center.z + radiusY * Math.sin(theta) * Math.cos(inclinationInRadians);
+        this.orbitalPathAttribute.setXYZ(i, x, y, z);
+      }
+
+      this.orbitalPathAttribute.needsUpdate = true;
+      this.line.geometry.setAttribute("position", this.orbitalPathAttribute);
+      this.line.geometry.computeBoundingSphere();
+    }
   }
 }
 

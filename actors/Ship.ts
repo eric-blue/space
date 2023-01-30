@@ -45,7 +45,7 @@ export class Ship extends Actor<Params> {
 
     this.update({
       // random number between 10000000 and 24000000000
-      orbitalRadius: Math.floor(Math.random() * (24000000000 - 100000000 + 1) + 10000000),
+      orbitalRadius: Math.floor(Math.random() * (2400000000000 - 100000000 + 1) + 10000000),
     });
   }
 }

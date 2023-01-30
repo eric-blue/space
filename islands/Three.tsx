@@ -71,7 +71,7 @@ function init() {
     energyOutput: 1e16, // joules
     exhaustVelocity: 100000, // m/s
     gravityWellMass: 1.989e30, // Sun standard,
-    orbitalRadius: 14959802300*2, // Earth standard,
+    orbitalRadius: 1495980230000, // Earth standard,
     orbitalEccentricity: 0.8,
     color: new THREE.Color(0xffff00),
     clickable: true,
@@ -130,8 +130,7 @@ function init() {
   renderer.physicallyCorrectLights = true;
   // renderer.outputEncoding = THREE.sRGBEncoding;
 
-  // @ts-expect-error: for debug
-  cameraControl.setCameraFocus(window.SYSTEM?.Jupiter?.mesh ?? kolkata.mesh)
+  cameraControl.setCameraFocus(window.SYSTEM.Earth.mesh ?? kolkata.mesh)
 
   const tick = () => {
     const elapsed = clock.getElapsedTime()
