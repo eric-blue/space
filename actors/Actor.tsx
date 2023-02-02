@@ -98,9 +98,11 @@ export class Actor<T = Record<string | number | symbol, never>> {
     this.line = new THREE.Line(
       new THREE.BufferGeometry(),
       new THREE.LineBasicMaterial({
-        color: 0xffffff,
+        color: 0x424242,
         transparent: true,
         opacity: 0.5,
+        depthWrite: true,
+        fog: false,
       }),
     );
     this.line.name = "orbital path";
@@ -151,8 +153,12 @@ export class Actor<T = Record<string | number | symbol, never>> {
     const { clock } = this.params;
     const elapsed = clock.getElapsedTime();
 
+    if (params) console.log(params)
+
+    if (params && this.params.orbitalRadius !== params.orbitalRadius) this.setOrbitalPeriod();
     this.setSpeed()
     this.setPosition(elapsed);
+    this.drawOrbitalPath();
   }
 
   destroy(scene: THREE.Scene) {
@@ -206,17 +212,19 @@ export class Actor<T = Record<string | number | symbol, never>> {
         eccentricity !== this.lastOrbitalEccentricity ||
         inclination !== this.lastOrbitalInclination
       )) {
+        this.isNavigating = true;
+
         const {distanceInThree: distance, distanceInSol} = this.getDistanceBetweenPositions(
           this.mesh.position,
           finalPosition
         );
 
-        console.log(this.acceleration)
-
         if (this.lastX !== undefined && this.lastY !== undefined && this.lastZ !== undefined) {
-          this.isNavigating = true;
+          console.log('is navigating')
           const transitionDuration = Math.abs(distanceInSol / this.acceleration) // speed in m/s
           const ratio = this.elapsedWhileNavigating / transitionDuration;
+          console.log('distance', distanceInSol)
+          console.log('time left', ratio)
           const t = Math.min(1, ratio);
           const deltaT = transitionDuration * t;
 
@@ -234,6 +242,7 @@ export class Actor<T = Record<string | number | symbol, never>> {
         if (distance < 1) {
           this.isNavigating = false;
           this.elapsedWhileNavigating = 0;
+          console.log('done navigating')
         }
 
         this.lastX = x; this.lastY = y; this.lastZ = z;
@@ -246,8 +255,6 @@ export class Actor<T = Record<string | number | symbol, never>> {
         this.lastOrbitalInclination = inclination;
       }
 
-      this.drawOrbitalPath(elapsed);
-
       const target = this.params.isGroupAnchor && this.group ? this.group : this.mesh;
       target?.position.set(x, y, z);
     }
@@ -257,12 +264,13 @@ export class Actor<T = Record<string | number | symbol, never>> {
   }
 
   // in seconds
-  setOrbitalPeriod() { // need to update when navigating
+  setOrbitalPeriod() {
     const { gravityWellMass, orbitalRadius: semiMajorAxis } = this.params;
     const μ = G * (gravityWellMass ?? 0);
     if (semiMajorAxis) {
       this.orbitalPeriod = 2 * π * Math.sqrt(Math.pow(semiMajorAxis, 3) / μ);
     }
+    console.log('updatedOrbitalPeriod', this.orbitalPeriod)
   }
 
   setSpeed() {
@@ -277,12 +285,14 @@ export class Actor<T = Record<string | number | symbol, never>> {
       if (currentVelocity > targetVelocity) {
         thrust = -energyOutput / exhaustVelocity; // negative value for deceleration
         this.status = ActorStatus.DECELERATING;
-      } else if (currentVelocity < targetVelocity) {
+      // } else if (currentVelocity < targetVelocity) {
+      } else {
         thrust = energyOutput / exhaustVelocity;
         this.status = ActorStatus.ACCELERATING;
-      } else {
-        thrust = 0;
-        this.status = ActorStatus.STABLE;
+      // } else {
+      //   // console.log('we here')
+      //   thrust = 0;
+      //   this.status = ActorStatus.STABLE;
       }
 
       this.acceleration = thrust / mass; // m/s^2
@@ -357,7 +367,7 @@ export class Actor<T = Record<string | number | symbol, never>> {
     // return { force: 0, forceX: 0, forceY: 0, forceZ: 0 };
   }
 
-  drawOrbitalPath(elapsed: number) {
+  drawOrbitalPath() {
     const {major, minor, inclination = 0} = this.calculatePosition(1);
 
     if (major) {
@@ -367,8 +377,6 @@ export class Actor<T = Record<string | number | symbol, never>> {
       const center = !this.params.isGroupAnchor
         ? this.group?.position ?? new THREE.Vector3(0, 0, 0)
         : new THREE.Vector3(0, 0, 0);
-
-      const points = [];
 
       for (let i = 0; i < 361; i++) {
         const theta = (i * Math.PI) / 180;

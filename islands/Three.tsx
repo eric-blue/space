@@ -44,15 +44,12 @@ function init() {
     mouse.y = - (event.clientY / sizes.height) * 2 + 1;
   });
 
-  addEventListener('click', () => {
-    // if (topIntersect) cameraControl.setCameraFocus(topIntersect);
-    if (topIntersect) console.log(topIntersect);
+  addEventListener('click', (event) => {
+    console.log(topIntersect)
+    if (event.shiftKey && topIntersect?.name === "ship") {
+      kolkata.navigate()
+    }
   })
-
-  // const intersect = raycaster.intersectObject()
-  const intersects = raycaster.intersectObjects(scene.children);
-  console.log(intersects);
-
 
   const skybox = new Skybox;
   skybox.spawn(scene);
@@ -130,7 +127,8 @@ function init() {
   renderer.physicallyCorrectLights = true;
   // renderer.outputEncoding = THREE.sRGBEncoding;
 
-  cameraControl.setCameraFocus(window.SYSTEM.Earth.mesh ?? kolkata.mesh)
+  // cameraControl.setCameraFocus(window.SYSTEM.Earth.mesh ?? kolkata.mesh)
+  cameraControl.setCameraFocus(kolkata.mesh)
 
   const tick = () => {
     const elapsed = clock.getElapsedTime()
@@ -149,12 +147,11 @@ function init() {
 
     raycaster.setFromCamera(mouse, cameraControl.camera);
     const intersects = raycaster.intersectObjects(
-      system?.map((celestial) => celestial.mesh as THREE.Mesh) ?? []
+      [...system?.map((celestial) => celestial.mesh as THREE.Mesh), kolkata.mesh as THREE.Mesh] ?? []
     );
     for (const intersect of intersects) {
       // if (intersect.object.userData.clickable) {
       topIntersect = intersect.object.type === "Mesh" ? intersect.object as THREE.Mesh : null;
-      console.log(topIntersect)
     }
 
     requestAnimationFrame(tick);

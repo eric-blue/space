@@ -43,9 +43,11 @@ export class Ship extends Actor<Params> {
   navigate() {
     if (!this.mesh) throw new Error("No mesh to navigate");
 
+    console.log("Navigating", this.acceleration, this.params);
+
     this.update({
-      // random number between 10000000 and 24000000000
       orbitalRadius: Math.floor(Math.random() * (2400000000000 - 100000000 + 1) + 10000000),
+
     });
   }
 }

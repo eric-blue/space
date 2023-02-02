@@ -4,7 +4,7 @@ const particlesGeometry = new THREE.BufferGeometry()
 const count = 50000
 const positions = new Float32Array(count * 3)
 for (let i = 0; i < count * 3; i++) {
-  positions[i] = (Math.random() - 0.5) * 10000
+  positions[i] = (Math.random() - 0.5) * 50000
 }
 
 particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
@@ -27,14 +27,12 @@ export class Skybox {
     )
 
     this.plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(5000, 5000, 1000, 1000),
+      new THREE.PlaneGeometry(10000, 10000, 2000, 2000),
       new THREE.MeshPhongMaterial({
         // color: new THREE.Color(424242),
         color: new THREE.Color(0x424242),
         wireframe: true,
-        // transparent: true,
         wireframeLinewidth: 1,
-        opacity: 0.95,
       })
     )
 
