@@ -9,6 +9,7 @@ import { Star } from "../actors/Star.ts";
 import { Planetary } from "../actors/Planetary.ts";
 import { CameraControl } from "../actors/Camera.ts";
 import { Clock } from "../actors/Clock.ts";
+import { HeadsUPDisplay } from "../actors/HUD.tsx";
 import { Skybox } from "../actors/Skybox.ts";
 import { Ship } from "../actors/Ship.ts";
 import { ActorParams } from "../actors/Actor.tsx";
@@ -35,6 +36,16 @@ function init() {
   // @ts-expect-error clock
   const clock = window.CLOCK = new Clock();
 
+  let sizes = { width: innerWidth, height: innerHeight }
+
+  addEventListener('resize', () => {
+    sizes = { width: innerWidth, height: innerHeight }
+    cameraControl.camera.aspect = sizes.width / sizes.height
+    cameraControl.camera.updateProjectionMatrix()
+    renderer.setSize(sizes.width, sizes.height)
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+  })
+
   const raycaster = new THREE.Raycaster();
   let topIntersect: THREE.Mesh|null = null;
 
@@ -51,6 +62,9 @@ function init() {
     }
   })
 
+  const HUD = new HeadsUPDisplay({cameraControl, clock, sizes});
+  HUD.spawn();
+
   const skybox = new Skybox;
   skybox.spawn(scene);
 
@@ -66,9 +80,10 @@ function init() {
     radius: 682/2,
     mass: 24000000000,
     energyOutput: 1e16, // joules
-    exhaustVelocity: 100000, // m/s
-    gravityWellMass: 1.989e30, // Sun standard,
-    orbitalRadius: 1495980230000, // Earth standard,
+    // exhaustVelocity: 100000, // m/s
+    exhaustVelocity: 1000, // m/s - why is this faster than above?
+    gravityWellMass: 1.989e30, // Sun standard, todo: this should be detected by closest planetary/satellite
+    orbitalRadius: 149598023000, // Earth standard,
     orbitalEccentricity: 0.8,
     color: new THREE.Color(0xffff00),
     clickable: true,
@@ -91,16 +106,6 @@ function init() {
     window.SYSTEM[[celestial['params']['label']]] = {
       ...celestial, focus: () => cameraControl.setCameraFocus(celestial.mesh),
     }
-  })
-
-  let sizes = { width: innerWidth, height: innerHeight }
-
-  addEventListener('resize', () => {
-    sizes = { width: innerWidth, height: innerHeight }
-    cameraControl.camera.aspect = sizes.width / sizes.height
-    cameraControl.camera.updateProjectionMatrix()
-    renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
   })
 
   // addEventListener('dblclick', () => {
@@ -147,7 +152,7 @@ function init() {
 
     raycaster.setFromCamera(mouse, cameraControl.camera);
     const intersects = raycaster.intersectObjects(
-      [...system?.map((celestial) => celestial.mesh as THREE.Mesh), kolkata.mesh as THREE.Mesh] ?? []
+      [kolkata.mesh as THREE.Mesh, ...system?.map((celestial) => celestial.mesh as THREE.Mesh)] ?? []
     );
     for (const intersect of intersects) {
       // if (intersect.object.userData.clickable) {
@@ -174,9 +179,9 @@ const buildSystem = (data: StarSystem, clock: Clock, textureLoader: THREE.Textur
   data.forEach((celestial) => {
     if ("type" in celestial) {
       const color = new THREE.Color(celestial.color);
-      const params = {clock, textureLoader, ...celestial, color}
-      if (celestial.type === "star") system.push(new Star(params))
-      else system.push(new Planetary(params))
+      const params = {clock, textureLoader, ...celestial, color};
+      if (celestial.type === "star") system.push(new Star(params));
+      else system.push(new Planetary(params));
 
     } else {
       const group = new THREE.Group();

@@ -182,24 +182,27 @@ export const sol: StarSystem = [
     {
       label: "Adrastea",
       type: "moon",
+      gravityWellMass: 1.898e27, // Jupiter standard,
       radius: 15000,
       mass: 2.8e18,
       orbitalRadius: 129000e3,
-      orbitalEccentricity: 0.000,
+      orbitalEccentricity: 0,
       orbitalInclination: 0.34
     },
     {
       label: "Thebe",
       type: "moon",
+      gravityWellMass: 1.898e27, // Jupiter standard,
       radius: 48000,
       mass: 7.1e18,
       orbitalRadius: 221800e3,
-      orbitalEccentricity: 0.000,
+      orbitalEccentricity: 0,
       orbitalInclination: 0.30
     },
     {
       label: "Themisto",
       type: "moon",
+      gravityWellMass: 1.898e27, // Jupiter standard,
       radius: 3000,
       mass: 3.8e16,
       orbitalRadius: 1545000e3,
@@ -209,28 +212,31 @@ export const sol: StarSystem = [
     {
       label: "Leda",
       type: "moon",
+      gravityWellMass: 1.898e27, // Jupiter standard,
       radius: 16000,
       mass: 4.5e18,
       orbitalRadius: 116700e3,
-      orbitalEccentricity: 0.000,
+      orbitalEccentricity: 0,
       orbitalInclination: 0.19
     },
     {
       label: "Ersa",
       type: "moon",
+      gravityWellMass: 1.898e27, // Jupiter standard,
       radius: 2000,
       mass: 1.4e17,
       orbitalRadius: 116700e3,
-      orbitalEccentricity: 0.000,
+      orbitalEccentricity: 0,
       orbitalInclination: 0.19
     },
     {
       label: "Himalia",
       type: "moon",
+      gravityWellMass: 1.898e27, // Jupiter standard,
       radius: 90000,
       mass: 2e19,
       orbitalRadius: 11445000e3,
-      orbitalEccentricity: 0.00,
+      orbitalEccentricity: 0.001,
       orbitalInclination: 0.13
     },
   ],
