@@ -56,10 +56,10 @@ export class Star extends Actor<Params> {
 
       const lensflare = new Lensflare();
       lensflare.addElement( new LensflareElement( textureFlare0, 300, 0, light.color ) );
-      lensflare.addElement( new LensflareElement( textureFlare3, 60, 0.2 ) );
-      lensflare.addElement( new LensflareElement( textureFlare3, 70, 0.3 ) );
-      lensflare.addElement( new LensflareElement( textureFlare3, 120, 0.35 ) );
-      lensflare.addElement( new LensflareElement( textureFlare3, 70, 0.4 ) );
+      // lensflare.addElement( new LensflareElement( textureFlare3, 60, 0.2 ) );
+      // lensflare.addElement( new LensflareElement( textureFlare3, 70, 0.3 ) );
+      // lensflare.addElement( new LensflareElement( textureFlare3, 120, 0.35 ) );
+      // lensflare.addElement( new LensflareElement( textureFlare3, 70, 0.4 ) );
       light.add( lensflare );
     }
 

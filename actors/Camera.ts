@@ -19,9 +19,9 @@ export class CameraControl {
       100,
       window.innerWidth / window.innerHeight,
       0.000001,
-      1000
+      100000
     );
-    this.camera.position.set(0, 0, .05);
+    this.camera.position.set(0, 0, .0125);
 
     this.controls = new CameraControls(this.camera, params.canvas as HTMLElement)
 
@@ -64,26 +64,16 @@ export class CameraControl {
 
   setCameraFocus(mesh?: THREE.Mesh) {
     if (mesh) this.lastTracked = mesh;
-    const target = mesh || this.lastTracked
-    const objectPosition = new THREE.Vector3();
+    const target = mesh || this.lastTracked;
+    const position = new THREE.Vector3();
 
-    target?.parent?.getObjectById(target.id)?.getWorldPosition(objectPosition);
+    target?.parent?.getObjectById(target.id)?.getWorldPosition(position);
 
-    this.controls.moveTo(
-      objectPosition.x,
-      objectPosition.y,
-      objectPosition.z,
-      true,
-    )
-
-    // this.controls.setLookAt(
-    //   objectPosition.x + 2,
-    //   objectPosition.y + 0.5,
-    //   objectPosition.z,
-    //   0,0,0
-    // )
+    this.controls.moveTo(position.x, position.y, position.z, true);
 
     this.controls.minZoom = 10;
     this.controls.maxZoom = 1000;
+
+    this.controls
   }
 }

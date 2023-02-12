@@ -9,6 +9,7 @@ interface Params {
   visible?: boolean;
 }
 
+// deno-lint-ignore no-empty-interface
 interface Config extends ReturnType<InstanceType<typeof Actor>['calculatePosition']> {}
 
 export class OrbitalPath {

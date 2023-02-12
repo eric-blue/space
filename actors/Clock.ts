@@ -1,17 +1,17 @@
 import * as THREE from "three";
 
-type TimeScale = 1000 | 10000 | 100000;
+type TimeScale = 10 | 100 | 1000 | 10000 | 100000;
 
 export class Clock {
   private clock: THREE.Clock;
   private time: number;
-  private timeScale: TimeScale;
+  timeScale: TimeScale;
 
   constructor() {
     this.clock = new THREE.Clock();
     this.clock.autoStart = true
     this.time = 0;
-    this.timeScale = 10000;
+    this.timeScale = 100;
   }
 
   getDelta(): number {
