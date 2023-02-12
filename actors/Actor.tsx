@@ -153,18 +153,16 @@ export class Actor<
   update(params?: Partial<Omit<ActorParams, 'clock'>>) {
     this.params = {...this.params, ...params};
     const { clock } = this.params;
-
-    if (params) console.log(params)
-
     if (params && this.params.orbitalRadius !== params.orbitalRadius) this.setOrbitalPeriod();
     this.setSpeed()
-    if (this.mesh?.name === "ship") this.drawOrbitalPath(clock);
+    this.drawOrbitalPath(clock);
     this.setPosition(clock);
   }
 
   destroy(scene: THREE.Scene) {
     if (!this.mesh) throw new Error("No mesh to destroy");
     this.mesh.geometry.dispose();
+
     this.currentOrbital.destroy();
     this.pastOrbital.destroy();
 
@@ -190,10 +188,13 @@ export class Actor<
       e !== this.lastOrbitalEccentricity ||
       inclination !== this.lastOrbitalInclination
     ))
+    const common = {major, eccentricity: e, inclination, centralBody, isNavigating}
+    /** I'm not sure why this is necessary, but it is. */
+    const timeScaleAdjustment = isNavigating ? this.params.clock.timeScale : 1;
 
     if (major && e !== undefined) {
       const minor = major * Math.sqrt(1 - Math.pow(e, 2));
-      const meanAnomaly = this.getAngularVelocity() * elapsed / this.params.clock.timeScale;
+      const meanAnomaly = this.getAngularVelocity() * elapsed / timeScaleAdjustment;
       const eccentricAnomaly = this.getEccentricAnomaly(meanAnomaly, meanAnomaly);
       const inclinationInRadians = inclination * (π / 180);
 
@@ -202,11 +203,11 @@ export class Actor<
         x: normalizeSolTo3(major * (Math.cos(eccentricAnomaly))),
         y: normalizeSolTo3(minor * Math.sin(eccentricAnomaly) * Math.sin(inclinationInRadians)),
         z: normalizeSolTo3(minor * Math.sin(eccentricAnomaly) * Math.cos(inclinationInRadians)),
-        major, minor, eccentricity: e, inclination, centralBody, isNavigating
+        minor, ...common,
       }
     }
 
-    return {x: 0, y: 0, z: 0, major, minor: 0, eccentricity: e, inclination, centralBody, isNavigating};
+    return {x: 0, y: 0, z: 0, minor: 0, ...common};
   }
 
   setPosition(clock: Clock) { // on every frame
@@ -214,22 +215,15 @@ export class Actor<
     const elapsed = clock.getElapsedTime();
 
     if (this.mesh) {
-      const {major, eccentricity, inclination, ...position} = this.calculatePosition(elapsed);
+      const {major, eccentricity, inclination, isNavigating, ...position} = this.calculatePosition(elapsed);
       x = position.x;
       y = position.y;
       z = position.z;
 
       const finalPosition = new THREE.Vector3(x, y, z);
 
-      if (this.acceleration && (
-        major !== this.lastOrbitalRadius ||
-        eccentricity !== this.lastOrbitalEccentricity ||
-        inclination !== this.lastOrbitalInclination
-      )) {
-        const {distanceInSol} = this.getDistanceBetweenPositions(
-          this.mesh.position,
-          finalPosition
-        );
+      if (isNavigating) {
+        const {distanceInSol} = this.getDistanceBetweenPositions(this.mesh.position, finalPosition);
 
         if (this.lastX !== undefined && this.lastY !== undefined && this.lastZ !== undefined) {
           const duration = Math.abs(distanceInSol / this.acceleration); // speed in m/s
@@ -253,7 +247,9 @@ export class Actor<
 
         this.elapsedWhileNavigating += elapsed;
 
-        if (distanceInSol <= 0) {
+        console.log('distanceInSol', distanceInSol)
+
+        if (distanceInSol < 1) {
           console.log('done navigating');
           // Update the last orbital parameters
           this.elapsedWhileNavigating = 0;
@@ -382,7 +378,7 @@ export class Actor<
   }
 
   drawTrajectory(start: THREE.Vector3, end: THREE.Vector3) {
-    const curve = new THREE.CatmullRomCurve3([start, end]);
+    const curve = new THREE.CatmullRomCurve3([start, end], false, "catmullrom", 0.5);
     const points = curve.getPoints(50);
     this.trajectory.geometry.setFromPoints(points);
     this.trajectory.visible = true;

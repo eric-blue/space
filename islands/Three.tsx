@@ -120,6 +120,7 @@ function init() {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
+    powerPreference: "high-performance"
   })
   renderer.setSize(sizes.width, sizes.height)
   renderer.shadowMap.enabled = true
@@ -132,7 +133,6 @@ function init() {
   renderer.physicallyCorrectLights = true;
   // renderer.outputEncoding = THREE.sRGBEncoding;
 
-  // cameraControl.setCameraFocus(window.SYSTEM.Earth.mesh ?? kolkata.mesh)
   cameraControl.setCameraFocus(kolkata.mesh)
 
   const tick = () => {

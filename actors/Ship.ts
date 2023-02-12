@@ -51,6 +51,8 @@ export class Ship extends Actor<Params> {
 
     this.update({
       orbitalRadius: Math.floor(Math.random() * (2400000000000 - 100000000 + 1) + 10000000),
+      orbitalInclination: Math.floor(Math.random() * (360 - 0 + 1) + 0),
+      orbitalEccentricity: Math.floor(Math.random() * (100 - 0 + 0.99) + 0) / 100,
     });
   }
 }
