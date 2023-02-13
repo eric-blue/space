@@ -1,10 +1,12 @@
 import * as THREE from "three";
+import { useEffect } from "preact/hooks";
+
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+
 // Two options for Fleet Engagements
   // - snapshot and overlay to find collisions
   // - physics engine => import RAPIER from 'https://cdn.skypack.dev/@dimforge/rapier3d-compat'; https://rapier.rs/docs/user_guides/javascript/getting_started_js
 
-import { useEffect } from "preact/hooks";
 import { Star } from "../actors/Star.ts";
 import { Planetary } from "../actors/Planetary.ts";
 import { CameraControl } from "../actors/Camera.ts";
@@ -15,9 +17,10 @@ import { Ship } from "../actors/Ship.ts";
 import { ActorParams } from "../actors/Actor.tsx";
 
 import { sol } from "../db/sol.ts";
+import { MAX_BOUNDS, SOLAR_DIAMETER } from "../constants.ts";
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x292929, 0.01, 3000);
+scene.fog = new THREE.Fog(0x292929, 0.01*SOLAR_DIAMETER, 300000000);
 
 const textureLoader = new THREE.TextureLoader(new THREE.LoadingManager());
 const gltfLoader = new GLTFLoader();

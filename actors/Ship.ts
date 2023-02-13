@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { ARTIFICIAL_SCALE_FACTOR } from "../constants.ts";
-import { normalizeSolTo3, Actor, ActorParams, normalize3ToSol } from "./Actor.tsx";
+import { ARTIFICIAL_SCALE_FACTOR, MAX_BOUNDS } from "../constants.ts";
+import { Actor, ActorParams } from "./Actor.tsx";
 
 const SCALE_F = ARTIFICIAL_SCALE_FACTOR * 100;
 
@@ -19,9 +19,9 @@ export class Ship extends Actor<Params> {
   constructor(params: ShipParams) {
     const { color = 0xffffff, width, height, depth } = params;
     const dimensions = {
-      width: normalizeSolTo3(width / 2) * SCALE_F,
-      height: normalizeSolTo3(height / 2) * SCALE_F,
-      depth: normalizeSolTo3(depth / 2) * SCALE_F,
+      width: width / 2 * SCALE_F,
+      height: height / 2 * SCALE_F,
+      depth: depth / 2 * SCALE_F,
     };
 
     const geometry = new THREE.BoxGeometry(dimensions.depth, dimensions.height, dimensions.width);
@@ -48,8 +48,7 @@ export class Ship extends Actor<Params> {
     if (!this.mesh) throw new Error("No mesh to navigate");
 
     this.update({
-      // @ts-expect-error debug
-      orbitalRadius: Math.floor(Math.random() * ((normalize3ToSol(window.MAXPOSITION) ?? 2400000000000) - 100000000 + 1) + 10000000),
+      orbitalRadius: Math.floor(Math.random() * ((MAX_BOUNDS ?? 2400000000000) - 100000000 + 1) + 10000000),
       orbitalInclination: Math.floor(Math.random() * (360 - 0 + 1) + 0),
       orbitalEccentricity: Math.floor(Math.random() * (100 - 0 + 0.99) + 0) / 100,
     });

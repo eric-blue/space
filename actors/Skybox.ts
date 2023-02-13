@@ -1,10 +1,11 @@
 import * as THREE from "three";
+import { MAX_BOUNDS, SOLAR_DIAMETER } from "../constants.ts";
 
 const particlesGeometry = new THREE.BufferGeometry()
 const count = 50000
 const positions = new Float32Array(count * 3)
 for (let i = 0; i < count * 3; i++) {
-  positions[i] = (Math.random() - 0.5) * 50000
+  positions[i] = (Math.random() - 0.5) * 50000 * SOLAR_DIAMETER
 }
 
 particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
@@ -17,27 +18,25 @@ export class Skybox {
     this.particles = new THREE.Points(
       particlesGeometry,
       new THREE.PointsMaterial({
-        size: 0.02,
+        size: SOLAR_DIAMETER,
         alphaTest: 0.001,
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
-        side: THREE.BackSide
       })
     )
 
     this.plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(10000, 10000, 2000, 2000),
+      new THREE.PlaneGeometry(MAX_BOUNDS, MAX_BOUNDS, 2000, 2000),
       new THREE.MeshPhongMaterial({
-        // color: new THREE.Color(424242),
-        color: new THREE.Color(0x424242),
+        color: 0x424242,
         wireframe: true,
         wireframeLinewidth: 1,
       })
     )
 
     this.plane.rotation.x = -Math.PI * 0.5
-    this.plane.position.y = -3
+    this.plane.position.y = SOLAR_DIAMETER
   }
 
   spawn(scene: THREE.Scene) {
@@ -45,7 +44,7 @@ export class Skybox {
   }
 
   update() {
-    this.particles.rotation.y += 0.0005
+    this.particles.rotation.y += 0.000005
   }
 }
 

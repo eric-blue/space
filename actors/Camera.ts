@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import CameraControls from 'camera-controls';
+import { MAX_BOUNDS } from "../constants.ts";
 
 CameraControls.install( { THREE: THREE } );
 
@@ -16,12 +17,12 @@ export class CameraControl {
 
   constructor(params: CameraControlParams) {
     this.camera = new THREE.PerspectiveCamera(
-      100,
+      MAX_BOUNDS * 0.1,
       window.innerWidth / window.innerHeight,
-      0.000001,
-      100000
+      1,
+      MAX_BOUNDS
     );
-    this.camera.position.set(0, 0, .0125);
+    this.camera.position.set(0, 0, 300000);
 
     this.controls = new CameraControls(this.camera, params.canvas as HTMLElement)
 
@@ -72,8 +73,6 @@ export class CameraControl {
     this.controls.moveTo(position.x, position.y, position.z, true);
 
     this.controls.minZoom = 10;
-    this.controls.maxZoom = 1000;
-
-    this.controls
+    this.controls.maxZoom = MAX_BOUNDS;
   }
 }

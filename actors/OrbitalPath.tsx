@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { Actor, normalizeSolTo3 } from "./Actor.tsx";
+import { Actor } from "./Actor.tsx";
 
 const π = Math.PI;
 const radialPoints = 361 * 20; // one more to close the loop
@@ -50,8 +50,7 @@ export class OrbitalPath {
   draw({inclination, major, minor, centralBody}: Config) {
     if (major) {
       const inclinationInRadians = inclination * (π / 180);
-      const radiusX = normalizeSolTo3(major);
-      const radiusY = normalizeSolTo3(minor);
+      const radiusX = major, radiusY = minor;
 
       for (let i = 0; i < radialPoints; i++) {
         const theta = (i * Math.PI) / 180 / 20;

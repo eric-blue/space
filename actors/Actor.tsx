@@ -3,12 +3,11 @@ import { asset } from "$fresh/runtime.ts";
 import * as THREE from "three";
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-import { G, SOLAR_DIAMETER } from "../constants.ts";
+import { G } from "../constants.ts";
 import { Clock } from "./Clock.ts";
 import { OrbitalPath } from "./OrbitalPath.tsx";
 
 const π = Math.PI;
-const radialPoints = 361 * 20; // one more to close the loop
 
 export type ActorType = "star" | "planet" | "moon" | "asteroid" | "ship";
 
@@ -201,10 +200,10 @@ export class Actor<
       const inclinationInRadians = inclination * (π / 180);
 
       return {
-        // x: normalizeSolTo3(major * (Math.cos(eccentricAnomaly) - e)), // removing e makes it just work (still an ellipse)
-        x: normalizeSolTo3(major * (Math.cos(eccentricAnomaly))),
-        y: normalizeSolTo3(minor * Math.sin(eccentricAnomaly) * Math.sin(inclinationInRadians)),
-        z: normalizeSolTo3(minor * Math.sin(eccentricAnomaly) * Math.cos(inclinationInRadians)),
+        // x: major * (Math.cos(eccentricAnomaly) - e)), // removing e makes it just work (still an ellipse)
+        x: major * (Math.cos(eccentricAnomaly)),
+        y: minor * Math.sin(eccentricAnomaly) * Math.sin(inclinationInRadians),
+        z: minor * Math.sin(eccentricAnomaly) * Math.cos(inclinationInRadians),
         minor, ...common,
       }
     }
@@ -225,10 +224,10 @@ export class Actor<
       const finalPosition = new THREE.Vector3(x, y, z);
 
       if (isNavigating) {
-        const {distanceInSol} = this.getDistanceBetweenPositions(this.mesh.position, finalPosition);
+        const {distance} = this.getDistanceBetweenPositions(this.mesh.position, finalPosition);
 
         if (this.lastX !== undefined && this.lastY !== undefined && this.lastZ !== undefined) {
-          const duration = Math.abs(distanceInSol / this.acceleration); // speed in m/s
+          const duration = Math.abs(distance / this.acceleration); // speed in m/s
           const t = Math.min(1, this.elapsedWhileNavigating / duration);
           const deltaT = duration * t;
           const {x: futureX, y: futureY, z: futureZ} = this.calculatePosition(elapsed + deltaT);
@@ -249,7 +248,7 @@ export class Actor<
 
         this.elapsedWhileNavigating += elapsed;
 
-        if (distanceInSol < 1) {
+        if (distance < 1) {
           console.log('done navigating');
           // Update the last orbital parameters
           this.elapsedWhileNavigating = 0;
@@ -264,9 +263,6 @@ export class Actor<
       const target = this.params.isGroupAnchor && this.group ? this.group : this.mesh;
       target?.position.set(x, y, z);
     }
-
-    // @ts-ignore debug
-    if (!window.MAXPOSITION || window.MAXPOSITION < Math.abs(x)) window.MAXPOSITION = Math.abs(x);
   }
 
   // in seconds
@@ -354,9 +350,8 @@ export class Actor<
     const { x: x2, y: y2, z: z2 } = position2;
     const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2) + Math.pow(z2 - z1, 2));
     return {
-      distanceInThree: distance,
+      distance,
       middlePoint: {x: (x1 + x2) / 2, y: (y1 + y2) / 2, z: (z1 + z2) / 2},
-      distanceInSol: normalize3ToSol(distance),
     };
   }
 
@@ -402,26 +397,6 @@ export class Actor<
 
     this.currentOrbital.draw(this.calculatePosition(1));
   }
-}
-
-/**
- * takes in a realworld measurement in meters and converts to
- * game logic where 1 unit = 1 solar diameter
- * @example
- * normalizeSolTo3(695700000) // 1
- */
-export function normalizeSolTo3(unit: number) {
-  return unit / SOLAR_DIAMETER;
-}
-
-/**
- * takes in a game logic measurement in solar diameter and converts to
- * realworld meters
- * @example
- * normalize3ToSol(1) // 695700000
- */
-export function normalize3ToSol(unit: number) {
-  return unit * SOLAR_DIAMETER;
 }
 
 const lerp = (start: number, end: number, t: number) => (1 - t) * start + t * end;
