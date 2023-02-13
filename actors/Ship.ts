@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ARTIFICIAL_SCALE_FACTOR } from "../constants.ts";
-import { normalizeSolTo3, Actor, ActorParams } from "./Actor.tsx";
+import { normalizeSolTo3, Actor, ActorParams, normalize3ToSol } from "./Actor.tsx";
 
 const SCALE_F = ARTIFICIAL_SCALE_FACTOR * 100;
 
@@ -47,10 +47,9 @@ export class Ship extends Actor<Params> {
   navigate() {
     if (!this.mesh) throw new Error("No mesh to navigate");
 
-    console.log("navigating", this.acceleration, this.params);
-
     this.update({
-      orbitalRadius: Math.floor(Math.random() * (2400000000000 - 100000000 + 1) + 10000000),
+      // @ts-expect-error debug
+      orbitalRadius: Math.floor(Math.random() * ((normalize3ToSol(window.MAXPOSITION) ?? 2400000000000) - 100000000 + 1) + 10000000),
       orbitalInclination: Math.floor(Math.random() * (360 - 0 + 1) + 0),
       orbitalEccentricity: Math.floor(Math.random() * (100 - 0 + 0.99) + 0) / 100,
     });

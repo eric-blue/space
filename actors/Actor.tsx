@@ -76,6 +76,7 @@ export class Actor<
   currentOrbital: OrbitalPath;
   pastOrbital: OrbitalPath;
 
+  trajectoryCurve: THREE.CatmullRomCurve3;
   trajectory: THREE.Line;
 
   orbitalPeriod?: number;
@@ -105,9 +106,10 @@ export class Actor<
       visible: false,
     });
 
+    this.trajectoryCurve = new THREE.CatmullRomCurve3;
     this.trajectory = new THREE.Line(
       new THREE.BufferGeometry(),
-      new THREE.LineBasicMaterial({color: 0xffffff})
+      new THREE.LineBasicMaterial({color: 0xffffff, fog: false})
     );
 
     this.orbitalPeriod = 0;
@@ -231,23 +233,21 @@ export class Actor<
           const deltaT = duration * t;
           const {x: futureX, y: futureY, z: futureZ} = this.calculatePosition(elapsed + deltaT);
 
-          this.drawTrajectory(
-            new THREE.Vector3(this.lastX, this.lastY, this.lastZ),
-            new THREE.Vector3(futureX, futureY, futureZ)
-          );
-
           if (clock.running()) {
             x = lerp(this.lastX, futureX, t);
             y = lerp(this.lastY, futureY, t);
             z = lerp(this.lastZ, futureZ, t);
           }
+
+          this.drawTrajectory(
+            new THREE.Vector3(x, y, z),
+            new THREE.Vector3(futureX, futureY, futureZ)
+          );
         }
 
         this.mesh.lookAt(finalPosition);
 
         this.elapsedWhileNavigating += elapsed;
-
-        console.log('distanceInSol', distanceInSol)
 
         if (distanceInSol < 1) {
           console.log('done navigating');
@@ -256,7 +256,7 @@ export class Actor<
           this.lastOrbitalRadius = major;
           this.lastOrbitalEccentricity = eccentricity;
           this.lastOrbitalInclination = inclination;
-          this.scrapTrajectory();
+          this.trajectory.visible = false;
         }
       }
 
@@ -289,7 +289,7 @@ export class Actor<
     //   targetVelocity = Math.sqrt(a * orbitalRadius);
     // }
 
-    if (this.mesh?.name === "ship" && energyOutput && exhaustVelocity) {
+    if (this.mesh?.name === "ship") {
       let thrust = 0;
 
       if (this.mesh?.name === "ship" && energyOutput && exhaustVelocity) {
@@ -355,6 +355,7 @@ export class Actor<
     const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2) + Math.pow(z2 - z1, 2));
     return {
       distanceInThree: distance,
+      middlePoint: {x: (x1 + x2) / 2, y: (y1 + y2) / 2, z: (z1 + z2) / 2},
       distanceInSol: normalize3ToSol(distance),
     };
   }
@@ -378,15 +379,12 @@ export class Actor<
   }
 
   drawTrajectory(start: THREE.Vector3, end: THREE.Vector3) {
-    const curve = new THREE.CatmullRomCurve3([start, end], false, "catmullrom", 0.5);
-    const points = curve.getPoints(50);
+    this.trajectoryCurve.points = [start, end];
+    this.trajectoryCurve.updateArcLengths();
+    const points = this.trajectoryCurve.getPoints(50);
     this.trajectory.geometry.setFromPoints(points);
+    this.trajectory.geometry.computeBoundingSphere();
     this.trajectory.visible = true;
-  }
-
-  scrapTrajectory() {
-    // this.trajectory.geometry.setFromPoints([]);
-    this.trajectory.visible = false;
   }
 
   drawOrbitalPath(clock: Clock) {
@@ -408,7 +406,7 @@ export class Actor<
 
 /**
  * takes in a realworld measurement in meters and converts to
- * game logic where 1 unit = 1 solar radius
+ * game logic where 1 unit = 1 solar diameter
  * @example
  * normalizeSolTo3(695700000) // 1
  */
@@ -417,7 +415,7 @@ export function normalizeSolTo3(unit: number) {
 }
 
 /**
- * takes in a game logic measurement in solar radii and converts to
+ * takes in a game logic measurement in solar diameter and converts to
  * realworld meters
  * @example
  * normalize3ToSol(1) // 695700000

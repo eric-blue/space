@@ -80,10 +80,10 @@ function init() {
     radius: 682/2,
     mass: 24000000000,
     energyOutput: 1e16, // joules
-    // exhaustVelocity: 100000, // m/s
-    exhaustVelocity: 1000, // m/s - why is this faster than above?
+    exhaustVelocity: 10000, // m/s
+    // exhaustVelocity: 10, // m/s - why is this faster than above?
     gravityWellMass: 1.989e30, // Sun standard, todo: this should be detected by closest planetary/satellite
-    orbitalRadius: 149598023000, // Earth standard,
+    orbitalRadius: 149598023000 - 20000000, // near Earth,
     orbitalEccentricity: 0.8,
     color: new THREE.Color(0xffff00),
     clickable: true,
@@ -120,6 +120,7 @@ function init() {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
+    // logarithmicDepthBuffer: true,
     powerPreference: "high-performance"
   })
   renderer.setSize(sizes.width, sizes.height)
