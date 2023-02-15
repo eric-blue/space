@@ -72,7 +72,7 @@ export class CameraControl {
 
     this.controls.moveTo(position.x, position.y, position.z, true);
 
-    this.controls.minZoom = 10;
-    this.controls.maxZoom = MAX_BOUNDS;
+    this.controls.minDistance = 100000;
+    this.controls.maxDistance = MAX_BOUNDS / 2;
   }
 }

@@ -48,12 +48,10 @@ export interface ActorParams {
    */
   orbitalEccentricity?: number;
 
-  // axialTilt?: number;
-  // axialRotation?: number;
-
+  axialTilt?: number; // todo
   spinRate?: number; // todo
 
-  clickable?: boolean;
+  clickable?: boolean; // todo
 }
 
 export enum ActorStatus {
@@ -83,9 +81,7 @@ export class Actor<
   lastOrbitalRadius?: number;
   lastOrbitalEccentricity?: number;
   lastOrbitalInclination?: number;
-  lastX?: number;
-  lastY?: number;
-  lastZ?: number;
+  lastPosition: THREE.Vector3;
 
   acceleration: number;
   elapsedWhileNavigating: number;
@@ -108,17 +104,14 @@ export class Actor<
     this.trajectoryCurve = new THREE.CatmullRomCurve3;
     this.trajectory = new THREE.Line(
       new THREE.BufferGeometry(),
-      new THREE.LineBasicMaterial({color: 0xffffff, fog: false})
+      new THREE.LineBasicMaterial({color: 0xffffff, fog: false, linewidth: 100, linecap: 'round'})
     );
 
     this.orbitalPeriod = 0;
     this.lastOrbitalRadius = params.orbitalRadius;
     this.lastOrbitalEccentricity = params.orbitalEccentricity;
     this.lastOrbitalInclination = params.orbitalInclination ?? 0.00001; // so low that it's basically 0
-
-    this.lastX;
-    this.lastY;
-    this.lastZ;
+    this.lastPosition = new THREE.Vector3(0, 0, 0);
 
     this.acceleration = 0;
     this.elapsedWhileNavigating = 0;
@@ -224,26 +217,26 @@ export class Actor<
       const finalPosition = new THREE.Vector3(x, y, z);
 
       if (isNavigating) {
-        const {distance} = this.getDistanceBetweenPositions(this.mesh.position, finalPosition);
+        const {distance, timeLeft} = this.getDistanceBetweenPositions(this.mesh.position, finalPosition);
 
-        if (this.lastX !== undefined && this.lastY !== undefined && this.lastZ !== undefined) {
-          const duration = Math.abs(distance / this.acceleration); // speed in m/s
-          const t = Math.min(1, this.elapsedWhileNavigating / duration);
-          const deltaT = duration * t;
-          const {x: futureX, y: futureY, z: futureZ} = this.calculatePosition(elapsed + deltaT);
+        const t = Math.min(1, this.elapsedWhileNavigating / timeLeft);
+        const deltaT = timeLeft * t;
+        const {x: futureX, y: futureY, z: futureZ} = this.calculatePosition(elapsed + deltaT);
 
-          if (clock.running()) {
-            x = lerp(this.lastX, futureX, t);
-            y = lerp(this.lastY, futureY, t);
-            z = lerp(this.lastZ, futureZ, t);
-          }
+        // console.log(deltaT)
+        // gets within 399 689 759 m before counting up again
+        // console.log(x - lerp(this.mesh.position.x, futureX, t))
 
-          this.drawTrajectory(
-            new THREE.Vector3(x, y, z),
-            new THREE.Vector3(futureX, futureY, futureZ)
-          );
+        if (clock.running()) {
+          x = lerp(this.mesh.position.x, futureX, t);
+          y = lerp(this.mesh.position.y, futureY, t);
+          z = lerp(this.mesh.position.z, futureZ, t);
         }
 
+        this.drawTrajectory(
+          new THREE.Vector3(x, y, z),
+          new THREE.Vector3(futureX, futureY, futureZ)
+        );
         this.mesh.lookAt(finalPosition);
 
         this.elapsedWhileNavigating += elapsed;
@@ -259,7 +252,6 @@ export class Actor<
         }
       }
 
-      this.lastX = x; this.lastY = y; this.lastZ = z;
       const target = this.params.isGroupAnchor && this.group ? this.group : this.mesh;
       target?.position.set(x, y, z);
     }
@@ -352,6 +344,7 @@ export class Actor<
     return {
       distance,
       middlePoint: {x: (x1 + x2) / 2, y: (y1 + y2) / 2, z: (z1 + z2) / 2},
+      timeLeft: Math.abs(distance / this.acceleration),
     };
   }
 

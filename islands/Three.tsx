@@ -20,7 +20,7 @@ import { sol } from "../db/sol.ts";
 import { MAX_BOUNDS, SOLAR_DIAMETER } from "../constants.ts";
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x292929, 0.01*SOLAR_DIAMETER, 300000000);
+scene.fog = new THREE.Fog(0x292929, 0.01*SOLAR_DIAMETER, MAX_BOUNDS/500);
 
 const textureLoader = new THREE.TextureLoader(new THREE.LoadingManager());
 const gltfLoader = new GLTFLoader();

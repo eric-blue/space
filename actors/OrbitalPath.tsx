@@ -10,7 +10,9 @@ interface Params {
 }
 
 // deno-lint-ignore no-empty-interface
-interface Config extends ReturnType<InstanceType<typeof Actor>['calculatePosition']> {}
+interface Config extends ReturnType<InstanceType<typeof Actor>['calculatePosition']> {
+
+}
 
 export class OrbitalPath {
   params?: Params;
@@ -30,6 +32,8 @@ export class OrbitalPath {
         opacity: 0.5,
         depthWrite: true,
         fog: false,
+        linewidth: 100,
+        clipIntersection: true,
       }),
     );
     this.line.visible = this.params?.visible ?? true,

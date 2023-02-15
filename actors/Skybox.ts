@@ -12,7 +12,7 @@ particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 
 
 export class Skybox {
   particles: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>;
-  plane: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshPhongMaterial>;
+  plane: THREE.GridHelper;
 
   constructor() {
     this.particles = new THREE.Points(
@@ -26,17 +26,8 @@ export class Skybox {
       })
     )
 
-    this.plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(MAX_BOUNDS, MAX_BOUNDS, 2000, 2000),
-      new THREE.MeshPhongMaterial({
-        color: 0x424242,
-        wireframe: true,
-        wireframeLinewidth: 1,
-      })
-    )
-
-    this.plane.rotation.x = -Math.PI * 0.5
-    this.plane.position.y = SOLAR_DIAMETER
+    this.plane = new THREE.GridHelper(MAX_BOUNDS, 10000, 0x424242, 424242);
+    this.plane.position.y = SOLAR_DIAMETER / 2;
   }
 
   spawn(scene: THREE.Scene) {

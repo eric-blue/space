@@ -14,4 +14,4 @@ const ASTRONOMICAL_UNIT = 149597870700; // m
 export const AU = ASTRONOMICAL_UNIT;
 
 export const MAX_SPEED = c * 0.1;
-export const MAX_BOUNDS = 6000000000000;
+export const MAX_BOUNDS = 6000000000000 * 10;
