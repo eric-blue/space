@@ -11,6 +11,8 @@
     "three": "https://esm.sh/three@0.148.0",
     "three/": "https://esm.sh/three@0.148.0/",
     "camera-controls": "https://esm.sh/camera-controls@1.37.5",
-    "camera-controls/": "https://esm.sh/camera-controls@1.37.5/"
+    "camera-controls/": "https://esm.sh/camera-controls@1.37.5/",
+    "three-mesh-ui": "https://esm.sh/three-mesh-ui@6.5.3",
+    "three-mesh-ui/": "https://esm.sh/three-mesh-ui@6.5.3/"
   }
 }

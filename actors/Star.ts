@@ -17,11 +17,53 @@ export class Star extends Actor<Params> {
   declare params: StarParams;
 
   constructor(params: StarParams) {
-    const geometry = new THREE.SphereGeometry(params.radius, 32, 32);
-    const material = new THREE.MeshStandardMaterial({
-      color: params.color ?? 0xffffff,
+    const geometry = new THREE.SphereGeometry(params.radius, 50, 50);
+    // const geometry = new THREE.PlaneGeometry(params.radius* 2,params.radius* 2, 50, 50);
+    // const material = new THREE.MeshStandardMaterial({
+    //   color: params.color ?? 0xffffff,
+    // });
+
+    const count = geometry.attributes.position.count
+    const randoms = new Float32Array(count)
+    for (let i = 0; i < count; i++) {
+      randoms[i] = Math.random() * 100
+    }
+    geometry.setAttribute('aRandom', new THREE.BufferAttribute(randoms, 1))
+
+    const material = new THREE.RawShaderMaterial({
       fog: false,
-    });
+      wireframe: true,
+      vertexShader: `
+        uniform mat4 projectionMatrix;
+        uniform mat4 viewMatrix;
+        uniform mat4 modelMatrix;
+
+        attribute vec3 position;
+        attribute float aRandom;
+
+        void main()
+        {
+          vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+          modelPosition.z += aRandom * 0.1;
+
+          vec4 viewPosition = viewMatrix * modelPosition;
+          vec4 projectedPosition = projectionMatrix * viewPosition;
+
+          gl_Position = projectedPosition;
+        }
+      `,
+      fragmentShader: `
+        precision mediump float;
+
+        void main()
+        {
+          gl_FragColor = vec4(0.5, 0.0, 1.0, 1.0);
+        }
+      `
+    })
+
+    console.log(geometry)
+
     super(geometry, material, {...params, type: 'star'});
   }
 
@@ -54,11 +96,11 @@ export class Star extends Actor<Params> {
       scene.add( light );
 
       const lensflare = new Lensflare();
-      lensflare.addElement( new LensflareElement( textureFlare0, 500, 0, light.color ) );
-      lensflare.addElement( new LensflareElement( textureFlare3, 60, 0.2 ) );
-      lensflare.addElement( new LensflareElement( textureFlare3, 70, 0.3 ) );
-      lensflare.addElement( new LensflareElement( textureFlare3, 120, 0.35 ) );
-      lensflare.addElement( new LensflareElement( textureFlare3, 70, 0.4 ) );
+      // lensflare.addElement( new LensflareElement( textureFlare0, 500, 0, light.color ) );
+      // lensflare.addElement( new LensflareElement( textureFlare3, 60, 0.2 ) );
+      // lensflare.addElement( new LensflareElement( textureFlare3, 70, 0.3 ) );
+      // lensflare.addElement( new LensflareElement( textureFlare3, 120, 0.35 ) );
+      // lensflare.addElement( new LensflareElement( textureFlare3, 70, 0.4 ) );
       light.add( lensflare );
     }
 

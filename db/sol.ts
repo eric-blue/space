@@ -110,7 +110,8 @@ export const sol: StarSystem = [
       orbitalRadius: 778340821e3, // Jupiter standard,
       orbitalEccentricity: 0.048, // Jupiter standard,
       orbitalInclination: 1.305, // Jupiter standard,
-      color: '#a52a2a'
+      color: '#a52a2a',
+      orbitalOffset: 1000000,
     },
     {
       label: "Io",

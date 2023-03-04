@@ -56,6 +56,12 @@ export class CameraControl {
       if ( event.code === 'ControlLeft'  ) this.keyState.controlLeft  = false;
       updateConfig();
     } );
+
+    addEventListener('resize', () => {
+      const sizes = { width: innerWidth, height: innerHeight };
+      this.camera.aspect = sizes.width / sizes.height
+      this.camera.updateProjectionMatrix()
+    })
   }
 
   update(delta: number) {
@@ -71,8 +77,11 @@ export class CameraControl {
     target?.parent?.getObjectById(target.id)?.getWorldPosition(position);
 
     this.controls.moveTo(position.x, position.y, position.z, true);
+    if (mesh) this.controls.dollyTo(2);
 
-    this.controls.minDistance = 100000;
-    this.controls.maxDistance = MAX_BOUNDS / 2;
+    const min = target?.geometry.boundingSphere?.radius ? target?.geometry.boundingSphere?.radius * 1.9 : 0 ?? 0;
+
+    this.controls.minDistance = min || 100000;
+    this.controls.maxDistance = 50000000000;
   }
 }

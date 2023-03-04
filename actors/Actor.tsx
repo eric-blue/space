@@ -3,7 +3,8 @@ import { asset } from "$fresh/runtime.ts";
 import * as THREE from "three";
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-import { G } from "../constants.ts";
+import { G, SOLAR_DIAMETER } from "../constants.ts";
+import { CameraControl } from "./Camera.ts";
 import { Clock } from "./Clock.ts";
 import { OrbitalPath } from "./OrbitalPath.tsx";
 
@@ -48,10 +49,11 @@ export interface ActorParams {
    */
   orbitalEccentricity?: number;
 
+  /** in milliseconds */
+  orbitalOffset?: number;
+
   axialTilt?: number; // todo
   spinRate?: number; // todo
-
-  clickable?: boolean; // todo
 }
 
 export enum ActorStatus {
@@ -65,7 +67,7 @@ export class Actor<
   T = Record<string | number | symbol, never>
 > extends THREE.EventDispatcher {
   params: ActorParams;
-  mesh?: THREE.Mesh;
+  mesh: THREE.Mesh;
   group?: THREE.Group;
 
   status: ActorStatus;
@@ -119,16 +121,24 @@ export class Actor<
     this.setOrbitalPeriod();
   }
 
-  spawn(scene: THREE.Scene) {
+  public spawn(scene: THREE.Scene) {
     if (!this.mesh) throw new Error("No mesh to spawn");
-    const orbitals = [this.currentOrbital.line, this.pastOrbital.line, this.trajectory];
 
-    if (!this.group) scene.add(this.mesh, ...orbitals);
-    else {
-      this.group.add(this.mesh);
-      if (this.params.isGroupAnchor) scene.add(this.group, ...orbitals);
-      else scene.add(...orbitals);
+    const isCentralStar = this.mesh?.name === "star" && this.mesh.position.x + this.mesh.position.y + this.mesh.position.z === 0
+
+    if (isCentralStar) {
+      scene.add(this.mesh);
+    } else {
+      const orbitals = [this.currentOrbital.line, this.pastOrbital.line, this.trajectory];
+
+      if (!this.group) scene.add(this.mesh, ...orbitals);
+      else {
+        this.group.add(this.mesh);
+        if (this.params.isGroupAnchor) scene.add(this.group, ...orbitals);
+        else scene.add(...orbitals);
+      }
     }
+
 
     // this.params.gltfLoader?.load(
     //   asset('/models/opensourceasset.gltf'),
@@ -144,16 +154,21 @@ export class Actor<
     this.update();
   }
 
-  update(params?: Partial<Omit<ActorParams, 'clock'>>) {
+  public update(params?: Partial<Omit<ActorParams, 'clock'>>) {
     this.params = {...this.params, ...params};
     const { clock } = this.params;
     if (params && this.params.orbitalRadius !== params.orbitalRadius) this.setOrbitalPeriod();
     this.setSpeed()
-    this.drawOrbitalPath(clock);
     this.setPosition(clock);
+    this.drawOrbitalPath(clock);
+
+    // planet?.mesh ? planet.mesh.rotation.y = 0.8 * elapsed : null;
+    // moon?.mesh.rotation.y = 0.015 * elapsed
+    // group.rotation.y = 5 * elapsed
+    // star.mesh.rotation.y = 0.01 * elapsed
   }
 
-  destroy(scene: THREE.Scene) {
+  public destroy(scene: THREE.Scene) {
     if (!this.mesh) throw new Error("No mesh to destroy");
     this.mesh.geometry.dispose();
 
@@ -162,10 +177,14 @@ export class Actor<
 
     scene.remove(this.mesh);
     this.mesh.removeFromParent();
-    this.mesh = undefined;
     this.status = ActorStatus.DESTROYED;
 
     // maybe spawn wreckage? if ship, else spawn resources?
+  }
+
+  public focus(camera: CameraControl) {
+    if (!this.mesh) console.warn(`${this.params.label} couldn't be focused`);
+    camera.setCameraFocus(this.mesh)
   }
 
   calculatePosition(elapsed = 1) {
@@ -177,47 +196,47 @@ export class Actor<
     } = this.params;
     const zero = new THREE.Vector3(0, 0, 0);
     const centralBody = !isGroupAnchor ? this.group?.position ?? zero : zero;
-    const isNavigating = Boolean(this.acceleration && (
-      major !== this.lastOrbitalRadius ||
-      e !== this.lastOrbitalEccentricity ||
-      inclination !== this.lastOrbitalInclination
+    const navigating = Boolean(this.acceleration && (
+      major !== this.lastOrbitalRadius || e !== this.lastOrbitalEccentricity || inclination !== this.lastOrbitalInclination
     ))
-    const common = {major, eccentricity: e, inclination, centralBody, isNavigating}
+    const common = {major, eccentricity: e, inclination, centralBody, navigating}
     /** I'm not sure why this is necessary, but it is. */
-    const timeScaleAdjustment = isNavigating ? this.params.clock.timeScale : 1;
+    const timeScaleAdjustment = navigating ? this.params.clock.timeScale : 1;
 
     if (major && e !== undefined) {
       const minor = major * Math.sqrt(1 - Math.pow(e, 2));
-      const meanAnomaly = this.getAngularVelocity() * elapsed / timeScaleAdjustment;
+      const meanAnomaly = this.getAngularVelocity() * (elapsed + (this.params.orbitalOffset ?? 0)) / timeScaleAdjustment;
       const eccentricAnomaly = this.getEccentricAnomaly(meanAnomaly, meanAnomaly);
       const inclinationInRadians = inclination * (π / 180);
 
       return {
+        ...common,
         // x: major * (Math.cos(eccentricAnomaly) - e)), // removing e makes it just work (still an ellipse)
         x: major * (Math.cos(eccentricAnomaly)),
         y: minor * Math.sin(eccentricAnomaly) * Math.sin(inclinationInRadians),
         z: minor * Math.sin(eccentricAnomaly) * Math.cos(inclinationInRadians),
-        minor, ...common,
+        minor,
       }
     }
 
     return {x: 0, y: 0, z: 0, minor: 0, ...common};
   }
 
-  setPosition(clock: Clock) { // on every frame
+  private setPosition(clock: Clock) { // on every frame
     let x, y, z;
     const elapsed = clock.getElapsedTime();
 
     if (this.mesh) {
-      const {major, eccentricity, inclination, isNavigating, ...position} = this.calculatePosition(elapsed);
+      const target = this.params.isGroupAnchor && this.group ? this.group : this.mesh;
+      const {major, eccentricity, inclination, navigating, ...position} = this.calculatePosition(elapsed);
       x = position.x;
       y = position.y;
       z = position.z;
 
       const finalPosition = new THREE.Vector3(x, y, z);
 
-      if (isNavigating) {
-        const {distance, timeLeft} = this.getDistanceBetweenPositions(this.mesh.position, finalPosition);
+      if (navigating && target.position.x && target.position.y && target.position.z) {
+        const {distance, timeLeft} = this.getDistanceBetweenPositions(target.position, finalPosition);
 
         const t = Math.min(1, this.elapsedWhileNavigating / timeLeft);
         const deltaT = timeLeft * t;
@@ -225,12 +244,12 @@ export class Actor<
 
         // console.log(deltaT)
         // gets within 399 689 759 m before counting up again
-        // console.log(x - lerp(this.mesh.position.x, futureX, t))
+        // console.log(x - lerp(target.position.x, futureX, t))
 
         if (clock.running()) {
-          x = lerp(this.mesh.position.x, futureX, t);
-          y = lerp(this.mesh.position.y, futureY, t);
-          z = lerp(this.mesh.position.z, futureZ, t);
+          x = lerp(target.position.x, futureX, t);
+          y = lerp(target.position.y, futureY, t);
+          z = lerp(target.position.z, futureZ, t);
         }
 
         this.drawTrajectory(
@@ -241,7 +260,8 @@ export class Actor<
 
         this.elapsedWhileNavigating += elapsed;
 
-        if (distance < 1) {
+        // if (distance < 1) {
+        if (distance < SOLAR_DIAMETER*100) {
           console.log('done navigating');
           // Update the last orbital parameters
           this.elapsedWhileNavigating = 0;
@@ -252,13 +272,12 @@ export class Actor<
         }
       }
 
-      const target = this.params.isGroupAnchor && this.group ? this.group : this.mesh;
-      target?.position.set(x, y, z);
+      target.position.set(x, y, z);
     }
   }
 
   // in seconds
-  setOrbitalPeriod() {
+  private setOrbitalPeriod() {
     const { gravityWellMass, orbitalRadius: semiMajorAxis } = this.params;
     const μ = G * (gravityWellMass ?? 0);
     if (semiMajorAxis) {
@@ -266,11 +285,12 @@ export class Actor<
     }
   }
 
-  setSpeed() {
+  private setSpeed() {
     const {mass, orbitalRadius = 0, energyOutput, exhaustVelocity} = this.params;
 
     const currentVelocity = this.getAngularVelocity() * orbitalRadius; // m/s
-    const targetVelocity = currentVelocity; // m/s
+    // temporarily hardcoding target velocity to never be reached
+    const targetVelocity = currentVelocity + 1; // m/s
 
     // if (this.targetDistance) {
     //   const a = (2 * this.targetDistance) / (this.startTime - this.endTime);
@@ -284,12 +304,11 @@ export class Actor<
         if (currentVelocity > targetVelocity) {
           thrust = -energyOutput / exhaustVelocity; // negative value for deceleration
           this.status = ActorStatus.DECELERATING;
-        // } else if (currentVelocity < targetVelocity) {
-        } else {
+        } else if (currentVelocity < targetVelocity) {
           thrust = energyOutput / exhaustVelocity;
           this.status = ActorStatus.ACCELERATING;
-        // } else {
-          // this.status = ActorStatus.STABLE;
+        } else {
+          this.status = ActorStatus.STABLE;
         }
       }
 
@@ -366,7 +385,7 @@ export class Actor<
     // return { force: 0, forceX: 0, forceY: 0, forceZ: 0 };
   }
 
-  drawTrajectory(start: THREE.Vector3, end: THREE.Vector3) {
+  private drawTrajectory(start: THREE.Vector3, end: THREE.Vector3) {
     this.trajectoryCurve.points = [start, end];
     this.trajectoryCurve.updateArcLengths();
     const points = this.trajectoryCurve.getPoints(50);
@@ -375,11 +394,17 @@ export class Actor<
     this.trajectory.visible = true;
   }
 
-  drawOrbitalPath(clock: Clock) {
-    const elapsed = clock.getElapsedTime();
-    const { isNavigating } = this.calculatePosition(elapsed);
+  private drawOrbitalPath(clock: Clock) {
+    if (
+      this.mesh?.name === "star" &&
+      /** no orbital drawn for unary systems */
+      this.mesh.position.x + this.mesh.position.y + this.mesh.position.z === 0
+    ) return;
 
-    if (isNavigating) {
+    const elapsed = clock.getElapsedTime();
+    const {navigating} = this.calculatePosition(elapsed);
+
+    if (navigating) {
       if (this.pastOrbital.line.visible !== true) {
         this.pastOrbital.duplicate(this.currentOrbital);
         this.pastOrbital.line.visible = true;

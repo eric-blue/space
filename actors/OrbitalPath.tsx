@@ -61,7 +61,8 @@ export class OrbitalPath {
         const x = centralBody.x + radiusX * Math.cos(theta);
         const y = centralBody.y + radiusY * Math.sin(theta) * Math.sin(inclinationInRadians);
         const z = centralBody.z + radiusY * Math.sin(theta) * Math.cos(inclinationInRadians);
-        this.pathAttribute.setXYZ(i, x, y, z);
+
+        if (!isNaN(x + y + z)) this.pathAttribute.setXYZ(i, x, y, z);
       }
 
       this.pathAttribute.needsUpdate = true;
