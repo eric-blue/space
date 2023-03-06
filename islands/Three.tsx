@@ -9,18 +9,18 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 import { CameraControl } from "../actors/Camera.ts";
 import { Clock } from "../actors/Clock.ts";
-import { HeadsUPDisplay } from "../actors/HUD.tsx";
+import { HeadsUPDisplay } from "../actors/HUD.ts";
 import { Skybox } from "../actors/Skybox.ts";
 import { Ship } from "../actors/Ship.ts";
 
 import { sol as starSystemData } from "../db/sol.ts"; // should be dynamic based on scenario
 import { MAX_BOUNDS, SOLAR_DIAMETER } from "../constants.ts";
-import { Renderer } from "../actors/Renderer.tsx";
+import { Renderer } from "../actors/Renderer.ts";
 import { Mouse } from "../actors/Mouse.ts";
-import { System } from "../actors/StarSystem.tsx";
+import { System } from "../actors/StarSystem.ts";
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x292929, 0.01*SOLAR_DIAMETER, MAX_BOUNDS/500);
+scene.fog = new THREE.Fog(0x292929, 0.01 * SOLAR_DIAMETER, MAX_BOUNDS / 500);
 
 const textureLoader = new THREE.TextureLoader(new THREE.LoadingManager());
 const gltfLoader = new GLTFLoader();
@@ -41,7 +41,9 @@ function init() {
   skybox.spawn(scene);
 
   const kolkata = new Ship({
+    scene,
     clock,
+    cameraControl,
     textureLoader,
     gltfLoader,
     label: "The Kolkata",
@@ -59,17 +61,40 @@ function init() {
     orbitalEccentricity: 0.8,
     color: new THREE.Color(0xffff00),
   })
-  kolkata.spawn(scene);
+  kolkata.spawn();
 
-  const system = new System({starSystemData, clock, textureLoader});
-  system.spawn(scene);
+  const mercurial = new Ship({
+    scene,
+    clock,
+    cameraControl,
+    textureLoader,
+    gltfLoader,
+    label: "The Mercurial",
+    type: "ship",
+    width: 682,
+    height: 682,
+    depth: 2406,
+    radius: 682/2,
+    mass: 24000000000,
+    energyOutput: 1e16, // joules
+    exhaustVelocity: 10000, // m/s
+    orbitalOffset: 1000,
+    gravityWellMass: 1.989e30, // Sun standard, todo: this should be detected by closest planetary/satellite
+    orbitalRadius: 149598023000 + 20000000, // near Earth,
+    orbitalEccentricity: 0.2,
+    color: new THREE.Color(0xff00ff),
+  })
+  mercurial.spawn();
+
+  const system = new System({starSystemData, scene, clock, textureLoader});
+  system.spawn();
 
   const {renderer} = new Renderer({canvas});
 
   requestAnimationFrame(() => {
-    system.celestials.find((planet) => planet.params.label === "Earth")?.focus(cameraControl)
-    // kolkata.focus(cameraControl)
-  })
+    // system.celestials.find((planet) => planet.params.label === "Earth")?.focus(cameraControl)
+    kolkata.focus(cameraControl)
+  });
 
   const tick = () => {
     const elapsed = clock.getElapsedTime();
@@ -77,10 +102,11 @@ function init() {
     system.update();
     skybox.update();
     kolkata.update();
+    mercurial.update();
 
     cameraControl.update(elapsed);
 
-    const touchableMeshes = [kolkata.mesh, ...system.celestials.map((celestial) => celestial.mesh)];
+    const touchableMeshes = [kolkata.mesh, mercurial.mesh, ...system.celestials.map((celestial) => celestial.mesh)];
     mouse.update(touchableMeshes);
 
     requestAnimationFrame(tick);
@@ -88,12 +114,12 @@ function init() {
     renderer.render(scene, cameraControl.camera);
   }
 
-  tick()
+  tick();
 }
 
 export default function HelloCruelWorld() {
-  useEffect(() => { init() }, [])
+  useEffect(() => { init() }, []);
 
-  return <canvas class="webgl" style={{backgroundColor: "#292929"}} draggable={true}/>
+  return <canvas class="webgl" style={{backgroundColor: "#292929"}} draggable={true}/>;
 }
 

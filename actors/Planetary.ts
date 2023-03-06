@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ARTIFICIAL_SCALE_FACTOR } from "../constants.ts";
-import { Actor, ActorParams } from "./Actor.tsx";
+import { Actor, ActorParams } from "./Actor.ts";
 
 interface Params {
   color?: THREE.Color;
@@ -17,8 +17,8 @@ export class Planetary extends Actor<Params> {
     super(geometry, material, params);
   }
 
-  spawn(scene: THREE.Scene) {
-    super.spawn(scene);
+  spawn() {
+    super.spawn();
     if (!this.mesh) throw new Error("No mesh to spawn");
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;

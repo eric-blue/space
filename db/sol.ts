@@ -1,5 +1,5 @@
 import { SOLAR_MASS, SOLAR_RADIUS } from "../constants.ts";
-import { StarSystem } from "../islands/Three.tsx";
+import { StarSystem } from "../actors/StarSystem.ts";
 
 export const sol: StarSystem = [
   {

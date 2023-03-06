@@ -6,14 +6,18 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { G, SOLAR_DIAMETER } from "../constants.ts";
 import { CameraControl } from "./Camera.ts";
 import { Clock } from "./Clock.ts";
-import { OrbitalPath } from "./OrbitalPath.tsx";
+import { OrbitalPath } from "./OrbitalPath.ts";
+import { PassiveRecord } from "./ship-components/PassiveSensors.ts";
 
 const π = Math.PI;
 
 export type ActorType = "star" | "planet" | "moon" | "asteroid" | "ship";
 
+const zero = new THREE.Vector3(0, 0, 0);
+
 export interface ActorParams {
   clock: Clock;
+  scene: THREE.Scene;
   textureLoader?: THREE.TextureLoader;
   gltfLoader?: GLTFLoader;
 
@@ -54,6 +58,8 @@ export interface ActorParams {
 
   axialTilt?: number; // todo
   spinRate?: number; // todo
+
+  onPlotIntercept?: (targetMesh: THREE.Mesh | THREE.Group) => PassiveRecord['position'] | null;
 }
 
 export enum ActorStatus {
@@ -65,7 +71,7 @@ export enum ActorStatus {
 
 export class Actor<
   T = Record<string | number | symbol, never>
-> extends THREE.EventDispatcher {
+> {
   params: ActorParams;
   mesh: THREE.Mesh;
   group?: THREE.Group;
@@ -88,8 +94,9 @@ export class Actor<
   acceleration: number;
   elapsedWhileNavigating: number;
 
+  interceptionTarget: THREE.Mesh | THREE.Group | null;
+
   constructor(geometry: THREE.BufferGeometry, material: THREE.Material, params: ActorParams & T) {
-    super()
     this.params = params;
     this.status = ActorStatus.STABLE;
     this.mesh = new THREE.Mesh(geometry, material);
@@ -118,24 +125,26 @@ export class Actor<
     this.acceleration = 0;
     this.elapsedWhileNavigating = 0;
 
+    this.interceptionTarget = null;
+
     this.setOrbitalPeriod();
   }
 
-  public spawn(scene: THREE.Scene) {
+  public spawn() {
     if (!this.mesh) throw new Error("No mesh to spawn");
 
     const isCentralStar = this.mesh?.name === "star" && this.mesh.position.x + this.mesh.position.y + this.mesh.position.z === 0
 
     if (isCentralStar) {
-      scene.add(this.mesh);
+      this.params.scene.add(this.mesh);
     } else {
       const orbitals = [this.currentOrbital.line, this.pastOrbital.line, this.trajectory];
 
-      if (!this.group) scene.add(this.mesh, ...orbitals);
+      if (!this.group) this.params.scene.add(this.mesh, ...orbitals);
       else {
         this.group.add(this.mesh);
-        if (this.params.isGroupAnchor) scene.add(this.group, ...orbitals);
-        else scene.add(...orbitals);
+        if (this.params.isGroupAnchor) this.params.scene.add(this.group, ...orbitals);
+        else this.params.scene.add(...orbitals);
       }
     }
 
@@ -194,7 +203,6 @@ export class Actor<
       orbitalInclination: inclination = 0.00001, // so low that it's basically 0
       isGroupAnchor,
     } = this.params;
-    const zero = new THREE.Vector3(0, 0, 0);
     const centralBody = !isGroupAnchor ? this.group?.position ?? zero : zero;
     const navigating = Boolean(this.acceleration && (
       major !== this.lastOrbitalRadius || e !== this.lastOrbitalEccentricity || inclination !== this.lastOrbitalInclination
@@ -205,6 +213,16 @@ export class Actor<
 
     if (major && e !== undefined) {
       const minor = major * Math.sqrt(1 - Math.pow(e, 2));
+
+      if (this.interceptionTarget && this.mesh.name === "ship") {
+        const target = this.params.onPlotIntercept?.(this.interceptionTarget);
+        if (target) {
+          const {x, y, z} = target;
+          return {...common, x, y, z, minor};
+        }
+
+      }
+
       const meanAnomaly = this.getAngularVelocity() * (elapsed + (this.params.orbitalOffset ?? 0)) / timeScaleAdjustment;
       const eccentricAnomaly = this.getEccentricAnomaly(meanAnomaly, meanAnomaly);
       const inclinationInRadians = inclination * (π / 180);

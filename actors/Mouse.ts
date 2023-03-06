@@ -20,7 +20,7 @@ export class Mouse {
     addEventListener('mousemove', (event) => this.mouseMove(event));
 
     addEventListener('click', (event) => {
-      // if (event.shiftKey && this.topIntersect?.name === "ship") kolkata.navigate();
+      if (event.shiftKey && this.topIntersect?.name === "ship") dispatchEvent(new CustomEvent('ship-click'));
     });
 
     addEventListener('dblclick', () => {

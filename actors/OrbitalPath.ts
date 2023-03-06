@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { Actor } from "./Actor.tsx";
+import { Actor } from "./Actor.ts";
 
 const π = Math.PI;
 const radialPoints = 361 * 20; // one more to close the loop

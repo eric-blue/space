@@ -1,7 +1,7 @@
 import { asset } from "$fresh/runtime.ts";
 
 import * as THREE from "three";
-import { Actor, ActorParams } from "./Actor.tsx";
+import { Actor, ActorParams } from "./Actor.ts";
 
 import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js';
 import { MAX_BOUNDS } from "../constants.ts";
@@ -67,8 +67,8 @@ export class Star extends Actor<Params> {
     super(geometry, material, {...params, type: 'star'});
   }
 
-  spawn(scene: THREE.Scene) {
-    super.spawn(scene);
+  spawn() {
+    super.spawn();
     if (!this.mesh) throw new Error("No mesh to spawn");
 
     const {textureLoader} = this.params;
@@ -93,19 +93,19 @@ export class Star extends Actor<Params> {
         this.mesh.position.x, this.mesh.position.y, this.mesh.position.z
       );
 
-      scene.add( light );
+      this.params.scene.add( light );
 
       const lensflare = new Lensflare();
-      // lensflare.addElement( new LensflareElement( textureFlare0, 500, 0, light.color ) );
-      // lensflare.addElement( new LensflareElement( textureFlare3, 60, 0.2 ) );
-      // lensflare.addElement( new LensflareElement( textureFlare3, 70, 0.3 ) );
-      // lensflare.addElement( new LensflareElement( textureFlare3, 120, 0.35 ) );
-      // lensflare.addElement( new LensflareElement( textureFlare3, 70, 0.4 ) );
+      lensflare.addElement( new LensflareElement( textureFlare0, 500, 0, light.color ) );
+      lensflare.addElement( new LensflareElement( textureFlare3, 60, 0.2 ) );
+      lensflare.addElement( new LensflareElement( textureFlare3, 70, 0.3 ) );
+      lensflare.addElement( new LensflareElement( textureFlare3, 120, 0.35 ) );
+      lensflare.addElement( new LensflareElement( textureFlare3, 70, 0.4 ) );
       light.add( lensflare );
     }
 
     addLight( 0.995, 0.5, 0.9 );
 
-    scene.add(new THREE.AmbientLight(0xffffff, 1), pointLight)
+    this.params.scene.add(new THREE.AmbientLight(0xffffff, 1), pointLight)
   }
 }
